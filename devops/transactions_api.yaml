@@ -1,0 +1,198 @@
+openapi: 3.0.3
+info:
+  title: Finance Tracker API
+  version: 1.0.0
+  description: API для управления транзакциями
+
+paths:
+  /transactions:
+    get:
+      summary: Получить список транзакций
+      description: |
+        Получить транзакции с пагинацией и фильтрами
+      parameters:
+        - name: page
+          in: query
+          description: Номер страницы
+          schema:
+            type: integer
+            default: 1
+        - name: size
+          in: query
+          description: Размер страницы
+          schema:
+            type: integer
+            default: 20
+        - name: category
+          in: query
+          description: Фильтр по категории
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          description: Дата начала периода (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: Дата окончания периода (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+
+    post:
+      summary: Создать новую транзакцию
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequest'
+      responses:
+        '201':
+          description: Транзакция создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+
+  /transactions/{transactionId}:
+    get:
+      summary: Получить транзакцию по ID
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+
+    put:
+      summary: Обновить транзакцию
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTransactionRequest'
+      responses:
+        '200':
+          description: Транзакция обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+
+    delete:
+      summary: Удалить транзакцию
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Транзакция удалена
+
+components:
+  schemas:
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [income, expense]
+        category:
+          type: string
+        amount:
+          type: number
+          format: float
+        date:
+          type: string
+          format: date
+        user_id:
+          type: integer
+      required:
+        - id
+        - name
+        - type
+        - category
+        - amount
+        - date
+        - user_id
+
+    CreateTransactionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [income, expense]
+        category:
+          type: string
+        amount:
+          type: number
+          format: float
+        date:
+          type: string
+          format: date
+      required:
+        - name
+        - type
+        - category
+        - amount
+        - date
+
+    UpdateTransactionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [income, expense]
+        category:
+          type: string
+        amount:
+          type: number
+          format: float
+        date:
+          type: string
+          format: date
