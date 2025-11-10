@@ -48,3 +48,70 @@
 3. Разработан набор тестов для проверки всех эндпойнтов API.
 4. Развёртывание: создан файл конфигурации Docker Compose для
 сборки и запуска проекта в контейнере.
+
+#### Общая архитектура
+
+```mermaid
+graph TB
+    subgraph "Клиентское приложение"
+        Client[Web/Mobile Client]
+    end
+    
+    subgraph "API Gateway / FastAPI Application"
+        API[FastAPI App<br/>main.py]
+        AuthAPI[Auth Controller<br/>/api/v1/auth]
+        TransAPI[Transactions Controller<br/>/api/v1/transactions]
+        GroupsAPI[Groups Controller<br/>/api/v1/groups]
+        AnalyticsAPI[Analytics Controller<br/>/api/v1/analytics]
+    end
+    
+    subgraph "Слой бизнес-логики"
+        AuthService[Auth Service<br/>Регистрация, авторизация, JWT]
+        TransService[Transaction Service<br/>CRUD операции, валидация]
+        GroupService[Group Service<br/>Управление группами]
+        AnalyticsService[Analytics Service<br/>Агрегация, группировка]
+        ExportService[Export Service<br/>CSV, XLSX]
+        NotificationService[Notification Service<br/>Напоминания]
+    end
+    
+    subgraph "Слой доступа к данным"
+        UserRepo[User Repository]
+        TransRepo[Transaction Repository]
+        GroupRepo[Group Repository]
+    end
+    
+    subgraph "База данных"
+        DB[(PostgreSQL<br/>Users, Transactions, Groups)]
+    end
+    
+    subgraph "Инфраструктура"
+        Docker[Docker Compose]
+        Migrations[Database Migrations<br/>Alembic]
+    end
+    
+    Client -->|HTTP/REST| API
+    API --> AuthAPI
+    API --> TransAPI
+    API --> GroupsAPI
+    API --> AnalyticsAPI
+    
+    AuthAPI --> AuthService
+    TransAPI --> TransService
+    GroupsAPI --> GroupService
+    AnalyticsAPI --> AnalyticsService
+    
+    AuthService --> UserRepo
+    TransService --> TransRepo
+    GroupService --> GroupRepo
+    AnalyticsService --> TransRepo
+    AnalyticsService --> GroupRepo
+    ExportService --> TransRepo
+    NotificationService --> TransRepo
+    
+    UserRepo --> DB
+    TransRepo --> DB
+    GroupRepo --> DB
+    
+    Docker --> DB
+    Migrations --> DB
+```

@@ -1,15 +1,22 @@
 openapi: 3.0.3
 info:
-  title: Finance Tracker API
+  title: Finance Tracker Transactions API
   version: 1.0.0
   description: API для управления транзакциями
+
+servers:
+  - url: /api/v1
+    description: API версия 1
 
 paths:
   /transactions:
     get:
       summary: Получить список транзакций
+      operationId: get_transactions
       description: |
         Получить транзакции с пагинацией и фильтрами
+      security:
+        - bearerAuth: []
       parameters:
         - name: page
           in: query
@@ -40,6 +47,17 @@ paths:
           schema:
             type: string
             format: date
+        - name: group_id
+          in: query
+          description: Фильтр по группе
+          schema:
+            type: integer
+        - name: transaction_type
+          in: query
+          description: Фильтр по типу транзакции
+          schema:
+            type: string
+            enum: [income, expense]
       responses:
         '200':
           description: Успешный ответ
@@ -58,9 +76,18 @@ paths:
                     type: integer
                   size:
                     type: integer
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
     post:
       summary: Создать новую транзакцию
+      operationId: create_transaction
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -74,10 +101,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Неверные данные запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /transactions/{transactionId}:
     get:
       summary: Получить транзакцию по ID
+      operationId: get_transaction_by_id
+      security:
+        - bearerAuth: []
       parameters:
         - name: transactionId
           in: path
@@ -91,9 +133,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Transaction'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Нет доступа к транзакции
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Транзакция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
     put:
       summary: Обновить транзакцию
+      operationId: update_transaction
+      security:
+        - bearerAuth: []
       parameters:
         - name: transactionId
           in: path
@@ -113,9 +176,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Неверные данные запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Нет доступа к транзакции
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Транзакция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
     delete:
       summary: Удалить транзакцию
+      operationId: delete_transaction
+      security:
+        - bearerAuth: []
       parameters:
         - name: transactionId
           in: path
@@ -125,8 +215,34 @@ paths:
       responses:
         '204':
           description: Транзакция удалена
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Нет доступа к транзакции
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Транзакция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен доступа
+
+  schemas:
   schemas:
     Transaction:
       type: object
@@ -148,6 +264,10 @@ components:
           format: date
         user_id:
           type: integer
+        group_id:
+          type: integer
+          nullable: true
+          description: ID группы, если транзакция относится к группе
       required:
         - id
         - name
@@ -156,6 +276,8 @@ components:
         - amount
         - date
         - user_id
+        - created_at
+        - updated_at
 
     CreateTransactionRequest:
       type: object
@@ -173,6 +295,10 @@ components:
         date:
           type: string
           format: date
+        group_id:
+          type: integer
+          nullable: true
+          description: ID группы, если транзакция относится к группе
       required:
         - name
         - type
@@ -196,3 +322,7 @@ components:
         date:
           type: string
           format: date
+        group_id:
+          type: integer
+          nullable: true
+          description: ID группы, если транзакция относится к группе

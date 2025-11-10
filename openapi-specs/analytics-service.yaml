@@ -1,0 +1,377 @@
+openapi: 3.0.3
+info:
+  title: Finance Tracker Analytics API
+  version: 1.0.0
+  description: API для получения аналитики по транзакциям
+
+servers:
+  - url: /api/v1
+    description: API версия 1
+
+paths:
+  /analytics/summary:
+    get:
+      summary: Получить общую статистику
+      operationId: get_summary
+      description: |
+        Получение общей статистики по доходам и расходам пользователя
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          description: Дата начала периода (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: Дата окончания периода (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: group_id
+          in: query
+          description: Фильтр по группе (опционально)
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SummaryResponse'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analytics/by-category:
+    get:
+      summary: Получить статистику по категориям
+      operationId: get_by_category
+      description: |
+        Получение статистики транзакций, сгруппированных по категориям
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          description: Дата начала периода (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: Дата окончания периода (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: transaction_type
+          in: query
+          description: Тип транзакций для фильтрации
+          schema:
+            type: string
+            enum: [income, expense]
+        - name: group_id
+          in: query
+          description: Фильтр по группе (опционально)
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryAnalyticsResponse'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analytics/by-period:
+    get:
+      summary: Получить статистику по временным периодам
+      operationId: get_by_period
+      description: |
+        Получение статистики транзакций, сгруппированных по временным периодам
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          required: true
+          description: Дата начала периода (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          required: true
+          description: Дата окончания периода (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: period_type
+          in: query
+          description: Тип группировки по времени
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: month
+        - name: group_id
+          in: query
+          description: Фильтр по группе (опционально)
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeriodAnalyticsResponse'
+        '400':
+          description: Неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analytics/trends:
+    get:
+      summary: Получить тренды доходов и расходов
+      operationId: get_trends
+      description: |
+        Получение информации о трендах доходов и расходов за период
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          required: true
+          description: Дата начала периода (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          required: true
+          description: Дата окончания периода (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: group_id
+          in: query
+          description: Фильтр по группе (опционально)
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendsResponse'
+        '400':
+          description: Неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен доступа
+
+  schemas:
+    SummaryResponse:
+      type: object
+      properties:
+        total_income:
+          type: number
+          format: float
+          example: 100000.00
+        total_expense:
+          type: number
+          format: float
+          example: 75000.00
+        balance:
+          type: number
+          format: float
+          example: 25000.00
+        transaction_count:
+          type: integer
+          example: 150
+        period:
+          type: object
+          properties:
+            start_date:
+              type: string
+              format: date
+            end_date:
+              type: string
+              format: date
+      required:
+        - total_income
+        - total_expense
+        - balance
+        - transaction_count
+
+    CategoryAnalyticsResponse:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+                example: "Еда"
+              total_amount:
+                type: number
+                format: float
+                example: 25000.00
+              transaction_count:
+                type: integer
+                example: 45
+              percentage:
+                type: number
+                format: float
+                example: 33.33
+              transaction_type:
+                type: string
+                enum: [income, expense]
+        period:
+          type: object
+          properties:
+            start_date:
+              type: string
+              format: date
+            end_date:
+              type: string
+              format: date
+      required:
+        - categories
+
+    PeriodAnalyticsResponse:
+      type: object
+      properties:
+        periods:
+          type: array
+          items:
+            type: object
+            properties:
+              period:
+                type: string
+                example: "2024-01"
+              start_date:
+                type: string
+                format: date
+              end_date:
+                type: string
+                format: date
+              total_income:
+                type: number
+                format: float
+                example: 50000.00
+              total_expense:
+                type: number
+                format: float
+                example: 30000.00
+              balance:
+                type: number
+                format: float
+                example: 20000.00
+              transaction_count:
+                type: integer
+                example: 75
+        period_type:
+          type: string
+          enum: [day, week, month, year]
+          example: "month"
+      required:
+        - periods
+        - period_type
+
+    TrendsResponse:
+      type: object
+      properties:
+        income_trend:
+          type: object
+          properties:
+            direction:
+              type: string
+              enum: [up, down, stable]
+              example: "up"
+            change_percentage:
+              type: number
+              format: float
+              example: 15.5
+            average_daily:
+              type: number
+              format: float
+              example: 3333.33
+        expense_trend:
+          type: object
+          properties:
+            direction:
+              type: string
+              enum: [up, down, stable]
+              example: "down"
+            change_percentage:
+              type: number
+              format: float
+              example: -5.2
+            average_daily:
+              type: number
+              format: float
+              example: 2500.00
+        period:
+          type: object
+          properties:
+            start_date:
+              type: string
+              format: date
+            end_date:
+              type: string
+              format: date
+      required:
+        - income_trend
+        - expense_trend
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: "Описание ошибки"
+        error_code:
+          type: string
+          example: "VALIDATION_ERROR"
+      required:
+        - detail
+

@@ -1,0 +1,2 @@
+"""Приложение Finance Tracker."""
+

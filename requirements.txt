@@ -1,2 +1,4 @@
 fastapi
 uvicorn
+datamodel-code-generator
+openapi-python-client
