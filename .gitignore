@@ -13,6 +13,11 @@ venv/
 env/
 ENV/
 
+# Environment variables
+.env
+*.env
+!.env.example
+
 # IDE / Editors
 .vscode/
 .idea/
@@ -25,3 +30,7 @@ Thumbs.db
 
 # Generated code
 generated/
+
+# Logs
+logs/
+*.log

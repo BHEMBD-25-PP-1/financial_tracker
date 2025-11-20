@@ -2,3 +2,7 @@ fastapi
 uvicorn
 datamodel-code-generator
 openapi-python-client
+sqlalchemy
+psycopg2-binary
+python-dotenv
+pytest
