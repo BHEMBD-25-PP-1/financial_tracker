@@ -44,47 +44,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
 - **Query Parameter Standards**
 - **Единые параметры для фильтрации**
 
-## Project Structure
-financial_tracker/
-├── main.py                    # Точка входа FastAPI приложения
-├── requirements.txt           # Зависимости Python
-├── README.md                  # Документация проекта
-├── app/
-│   ├── __init__.py
-│   ├── analytics/            # Модуль аналитики по транзакциям
-│   │   ├── __init__.py
-│   │   ├── controllers.py    # Конечные точки API
-│   │   └── models.py         # Pydantic модели
-│   ├── auth/                 # Модуль аутентификации API
-│   │   ├── __init__.py
-│   │   ├── controllers.py
-│   │   └── models.py
-│   ├── groups/               # Модуль групп пользователей и транзакций
-│   │   ├── __init__.py
-│   │   ├── controllers.py
-│   │   └── models.py
-│   ├── transactions/         # Модуль транзакций 
-│   │   ├── __init__.py
-│   │   ├── controllers.py
-│   │   └── models.py
-│   ├── db/                   # Модуль базы данных
-│   │   ├── __init__.py
-│   │   ├── base.py           # Базовые ORM модели
-│   │   ├── models.py         # Модели базы данных
-│   │   └── session.py        # Сессии базы данных
-│   └── repositories/         # Слой доступа к данным
-│       ├── __init__.py
-│       ├── users.py          # Репозиторий пользователей
-│       ├── transactions.py   # Репозиторий транзакций
-│       ├── groups.py         # Репозиторий групп
-│       └── base.py           # Базовый класс репозитория
-│   
-└── openapi-specs/            # Спецификации OpenAPI
-    ├── analytics-service.yaml
-    ├── auth-service.yaml
-    ├── groups-service.yaml
-    └── transactions-service.yaml
-
 ## API
 
 ### Аутентификация (/api/v1/auth)
