@@ -22,7 +22,7 @@ def setup_logging(log_dir: Path = None):
     """Настройка логирования для всего проекта."""
     # Создаем папку для логов
     if log_dir is None:
-        log_dir = Path(__file__).parent.parent / "logs"
+        log_dir = Path(__file__).parent.parent.parent / "logs"
     else:
         log_dir = Path(log_dir)
     
@@ -41,7 +41,7 @@ def setup_logging(log_dir: Path = None):
     user_filter = UserIdFilter()
 
     # Файловый обработчик с ротацией
-    log_file = log_dir / "python_postgres_test.log"
+    log_file = log_dir / "app.log"
     file_handler = RotatingFileHandler(
         str(log_file),
         maxBytes=10 * 1024 * 1024,  # 10 MB
