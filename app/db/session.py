@@ -1,27 +1,29 @@
-"""Конфигурация сессий базы данных.
+"""Конфигурация сессий базы данных."""
 
-TODO: Реализовать создание сессий для работы с БД
-"""
+from typing import Generator
 
-# from sqlalchemy import create_engine
-# from sqlalchemy.orm import sessionmaker, Session
-# from typing import Generator
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
 
-# from app.core.config import settings
+from app.core.config import DATABASE_URL
 
-# engine = create_engine(settings.DATABASE_URL)
-# SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Настройка connection pooling для производительности
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,
+    pool_recycle=3600,
+    echo=False,
+)
+
+SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 
-# def get_db() -> Generator[Session, None, None]:
-#     """Получить сессию базы данных.
-#
-#     Yields:
-#         Session: Сессия базы данных
-#     """
-#     db = SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
-
+def get_db() -> Generator[Session, None, None]:
+    """Получить сессию базы данных."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

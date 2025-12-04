@@ -1,55 +1,123 @@
-"""Репозиторий для работы с пользователями.
+"""Репозиторий для работы с пользователями в базе данных."""
 
-TODO: Реализовать методы для работы с пользователями в БД
-"""
+import re
+from contextlib import contextmanager
+from typing import List, Optional
 
-# from typing import Optional
-# from sqlalchemy.orm import Session
-# from app.db.models import User
-# from app.repositories.base_repository import BaseRepository
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from app.db.models import User
+from app.db.session import SessionLocal
+from app.repositories.base_repository import BaseRepository
+
+EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 
 
-# class UserRepository(BaseRepository[User]):
-#     """Репозиторий для работы с пользователями."""
-#
-#     def __init__(self, db: Session):
-#         """Инициализация репозитория.
-#
-#         Args:
-#             db: Сессия базы данных
-#         """
-#         super().__init__(User, db)
-#
-#     def get_by_login(self, login: str) -> Optional[User]:
-#         """Получить пользователя по логину.
-#
-#         Args:
-#             login: Логин пользователя
-#
-#         Returns:
-#             Optional[User]: Пользователь или None
-#         """
-#         return self.db.query(User).filter(User.login == login).first()
-#
-#     def create_user(
-#         self, first_name: str, last_name: str, login: str, password_hash: str
-#     ) -> User:
-#         """Создать нового пользователя.
-#
-#         Args:
-#             first_name: Имя
-#             last_name: Фамилия
-#             login: Логин
-#             password_hash: Хеш пароля
-#
-#         Returns:
-#             User: Созданный пользователь
-#         """
-#         user = User(
-#             first_name=first_name,
-#             last_name=last_name,
-#             login=login,
-#             password_hash=password_hash,
-#         )
-#         return self.create(user)
+class UserRepository(BaseRepository[User]):
+    """Репозиторий для работы с пользователями."""
 
+    def __init__(self, db_session: Optional[Session] = None):
+        """Инициализация репозитория."""
+        self.db = db_session or SessionLocal()
+        self._owns_session = db_session is None
+        self._logger = None
+        super().__init__(User, self.db)
+
+    def __enter__(self):
+        """Вход в context manager."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Выход из context manager."""
+        if self._owns_session:
+            self.db.close()
+
+    @property
+    def logger(self):
+        """Логгер для репозитория."""
+        if self._logger is None:
+            import logging
+            self._logger = logging.getLogger(__name__)
+        return self._logger
+
+    @contextmanager
+    def _transaction(self):
+        """Context manager для управления транзакциями."""
+        try:
+            yield self.db
+            self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            self.logger.error(f"Transaction failed: {e}")
+            raise
+
+    @staticmethod
+    def _validate_email(email: str) -> None:
+        """Валидация email адреса."""
+        if not email or not email.strip():
+            raise ValueError("Email cannot be empty")
+        if not EMAIL_REGEX.match(email):
+            raise ValueError(f"Invalid email format: {email}")
+
+    @staticmethod
+    def _validate_name(name: str) -> None:
+        """Валидация имени пользователя."""
+        if not name or not name.strip():
+            raise ValueError("Name cannot be empty")
+        if len(name.strip()) > 100:
+            raise ValueError("Name too long (max 100 characters)")
+
+    def add(self, name: str, email: str) -> User:
+        """Добавить нового пользователя."""
+        self.logger.info(f"Creating user with email: {email}")
+        
+        self._validate_name(name)
+        self._validate_email(email)
+
+        try:
+            with self._transaction():
+                user = User(name=name.strip(), email=email.strip().lower())
+                self.db.add(user)
+                self.db.flush()
+                self.logger.info(f"User created successfully with id: {user.id}")
+                return user
+        except IntegrityError as e:
+            self.logger.error(f"Failed to create user: email {email} already exists")
+            raise ValueError(f"User with email {email} already exists") from e
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error while creating user: {e}")
+            raise RuntimeError(f"Database error: {e}") from e
+
+    def get_by_id(self, user_id: int) -> Optional[User]:
+        """Получить пользователя по ID."""
+        self.logger.debug(f"Fetching user by id: {user_id}")
+        
+        try:
+            user = self.db.query(User).filter(User.id == user_id).first()
+            if user:
+                self.logger.debug(f"User found: id={user.id}, email={user.email}")
+            else:
+                self.logger.debug(f"User not found: id={user_id}")
+            return user
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error while fetching user by id {user_id}: {e}")
+            raise RuntimeError(f"Database error: {e}") from e
+
+    def get_all(self) -> List[User]:
+        """Получить всех пользователей."""
+        self.logger.debug("Fetching all users")
+        
+        try:
+            users = self.db.query(User).all()
+            self.logger.debug(f"Found {len(users)} users")
+            return users
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error while fetching all users: {e}")
+            raise RuntimeError(f"Database error: {e}") from e
+
+    def close(self):
+        """Закрыть сессию базы данных."""
+        if self._owns_session:
+            self.db.close()
+            self.logger.debug("Database session closed")

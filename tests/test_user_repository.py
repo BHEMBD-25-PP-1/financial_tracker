@@ -6,18 +6,14 @@ from pathlib import Path
 import pytest
 
 # Ensure project modules are importable when running pytest from repo root
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[0]
 if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from python_postgres_test.db import SessionLocal, engine
-from python_postgres_test.entity import Base, User
-from python_postgres_test.logger import setup_logging
-from python_postgres_test.user_repository import UserRepository
-
-
-# Настройка логирования для тестов
-setup_logging()
+from app.db.session import SessionLocal, engine
+from app.db.base import Base
+from app.db.models import User
+from app.repositories.user_repository import UserRepository
 
 
 def _clean_users_table():
@@ -63,7 +59,6 @@ def test_add_user_persists_record(repo):
     assert user.name == "Alice"
     assert user.email == "alice@example.com"
 
-    # Проверяем, что пользователь действительно сохранен в БД
     session = SessionLocal()
     try:
         db_user = session.query(User).filter_by(id=user.id).one()
@@ -101,7 +96,6 @@ def test_add_duplicate_email_raises_error(repo):
     """Тест создания пользователя с дублирующимся email."""
     repo.add(name="Alice", email="alice@example.com")
     
-    # Попытка создать пользователя с таким же email должна вызвать ValueError
     with pytest.raises(ValueError, match="already exists"):
         repo.add(name="Bob", email="alice@example.com")
 
@@ -123,25 +117,21 @@ def test_get_all_returns_empty_list(repo):
 
 def test_add_user_with_invalid_email_raises_error(repo):
     """Тест валидации email при создании пользователя."""
-    # Невалидный email
     with pytest.raises(ValueError, match="Invalid email format"):
         repo.add(name="Alice", email="invalid-email")
     
-    # Пустой email
     with pytest.raises(ValueError, match="Email cannot be empty"):
         repo.add(name="Alice", email="")
 
 
 def test_add_user_with_invalid_name_raises_error(repo):
     """Тест валидации имени при создании пользователя."""
-    # Пустое имя
     with pytest.raises(ValueError, match="Name cannot be empty"):
         repo.add(name="", email="alice@example.com")
     
-    # Имя только из пробелов
     with pytest.raises(ValueError, match="Name cannot be empty"):
         repo.add(name="   ", email="alice@example.com")
     
-    # Имя слишком длинное
     with pytest.raises(ValueError, match="Name too long"):
         repo.add(name="A" * 101, email="alice@example.com")
+
