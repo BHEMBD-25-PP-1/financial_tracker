@@ -1,8 +1,19 @@
 """ORM модели для базы данных."""
 
-from sqlalchemy import Column, Integer, String
+"""ORM модели для базы данных."""
+
+from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, Enum
+from sqlalchemy.orm import relationship
+import enum
 
 from app.db.base import BaseModel
+
+
+class TransactionType(enum.Enum):
+    """Тип транзакции."""
+
+    INCOME = "income"
+    EXPENSE = "expense"
 
 
 class User(BaseModel):
@@ -10,12 +21,55 @@ class User(BaseModel):
 
     __tablename__ = "users"
 
+    # Упрощенная модель - только поля, нужные для транзакций
     name = Column(String(100), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
+
+    # Relationships
+    transactions = relationship("Transaction", back_populates="user")
 
     def __repr__(self):
         """Строковое представление объекта."""
         return f"<User id={self.id} name='{self.name}' email='{self.email}'>"
+
+
+class Group(BaseModel):
+    """Модель группы."""
+
+    __tablename__ = "groups"
+
+    name = Column(String(200), nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    # Relationships
+    owner = relationship("User")
+    transactions = relationship("Transaction", back_populates="group")
+
+    def __repr__(self):
+        """Строковое представление объекта."""
+        return f"<Group id={self.id} name='{self.name}'>"
+
+
+class Transaction(BaseModel):
+    """Модель транзакции."""
+
+    __tablename__ = "transactions"
+
+    name = Column(String(255), nullable=False)
+    type = Column(Enum(TransactionType), nullable=False)
+    category = Column(String(100), nullable=False)
+    amount = Column(Float, nullable=False)
+    date = Column(Date, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    group_id = Column(Integer, ForeignKey("groups.id"), nullable=True)
+
+    # Relationships
+    user = relationship("User", back_populates="transactions")
+    group = relationship("Group", back_populates="transactions")
+
+    def __repr__(self):
+        """Строковое представление объекта."""
+        return f"<Transaction id={self.id} name='{self.name}' type='{self.type}' amount={self.amount}>"
 
 
 # Закомментированные модели для будущей реализации:

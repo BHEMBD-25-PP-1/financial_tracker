@@ -6,9 +6,12 @@
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status, Depends
 from fastapi.responses import Response
+from sqlalchemy.orm import Session
 
+from app.db.session import get_db
+from app.repositories.transactions_repository import TransactionRepository
 from app.transactions.models import (
     CreateTransactionRequest,
     Error,
@@ -69,21 +72,48 @@ async def get_transactions(
     summary="Создать новую транзакцию",
     operation_id="create_transaction",
 )
-async def create_transaction(request: CreateTransactionRequest) -> Transaction:
+async def create_transaction(
+    request: CreateTransactionRequest,
+    db: Session = Depends(get_db)
+) -> Transaction:
     """Создать новую транзакцию.
 
     Args:
         request: Данные для создания транзакции
+        db: Сессия базы данных
 
     Returns:
         Transaction: Созданная транзакция
     """
-    # TODO: Реализовать логику создания транзакции в базе данных
-    # Это заглушка для демонстрации структуры API
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Метод еще не реализован",
-    )
+    repo = TransactionRepository(db)
+    
+    try:
+        # TODO: Получить user_id из текущего пользователя (из токена)
+        # Пока используем заглушку
+        current_user_id = 1  # Заглушка
+        
+        transaction = repo.create(
+            name=request.name,
+            type=request.type,
+            category=request.category,
+            amount=request.amount,
+            transaction_date=request.transaction_date,
+            user_id=current_user_id,
+            group_id=request.group_id
+        )
+        
+        return transaction
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка базы данных при создании транзакции"
+        )
 
 
 @router.get(
@@ -119,13 +149,16 @@ async def get_transaction_by_id(transaction_id: int) -> Transaction:
     operation_id="update_transaction",
 )
 async def update_transaction(
-    transaction_id: int, request: UpdateTransactionRequest
+    transaction_id: int,
+    request: UpdateTransactionRequest,
+    db: Session = Depends(get_db)
 ) -> Transaction:
     """Обновить транзакцию.
 
     Args:
         transaction_id: ID транзакции
         request: Данные для обновления транзакции
+        db: Сессия базы данных
 
     Returns:
         Transaction: Обновленная транзакция
@@ -133,12 +166,57 @@ async def update_transaction(
     Raises:
         HTTPException: Если транзакция не найдена
     """
-    # TODO: Реализовать логику обновления транзакции в базе данных
-    # Это заглушка для демонстрации структуры API
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Транзакция с ID {transaction_id} не найдена",
-    )
+    repo = TransactionRepository(db)
+    
+    # TODO: Получить user_id из текущего пользователя (из токена)
+    current_user_id = 1  # Заглушка
+    
+    # Подготавливаем данные для обновления
+    update_data = {}
+    
+    if request.name is not None:
+        update_data['name'] = request.name
+    
+    if request.amount is not None:
+        update_data['amount'] = request.amount
+    
+    if request.category is not None:
+        update_data['category'] = request.category
+    
+    if request.transaction_date is not None:
+        update_data['date'] = request.transaction_date
+    
+    if request.type is not None:
+        update_data['type'] = request.type
+    
+    if request.group_id is not None:
+        update_data['group_id'] = request.group_id
+    
+    try:
+        transaction = repo.update(
+            transaction_id=transaction_id,
+            user_id=current_user_id,
+            **update_data
+        )
+        
+        if not transaction:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Транзакция с ID {transaction_id} не найдена"
+            )
+        
+        return transaction
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка базы данных при обновлении транзакции"
+        )
 
 
 @router.delete(
