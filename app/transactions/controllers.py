@@ -11,7 +11,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.repositories.transactions_repository import TransactionRepository
+from app.repositories.transaction_repository import TransactionRepository
 from app.transactions.models import (
     CreateTransactionRequest,
     Error,
@@ -97,7 +97,7 @@ async def create_transaction(
             type=request.type,
             category=request.category,
             amount=request.amount,
-            transaction_date=request.transaction_date,
+            transaction_date=request.date,
             user_id=current_user_id,
             group_id=request.group_id
         )
