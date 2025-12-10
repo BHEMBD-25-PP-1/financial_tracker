@@ -6,8 +6,6 @@ from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-from app.core.config import DATABASE_URL
-
 # Настройки JWT
 SECRET_KEY = "your-secret-key-change-in-production"  # TODO: Вынести в переменные окружения
 ALGORITHM = "HS256"
