@@ -6,20 +6,29 @@
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
+from sqlalchemy.orm import Session
 
+from app.core.dependencies import get_current_user
+from app.db.models import User as DBUser, GroupRole as DBGroupRole
+from app.db.session import get_db
 from app.groups.models import (
     AddMemberRequest,
+    CategoryStatistic,
     CreateGroupRequest,
-    Error,
     Group,
     GroupAnalyticsResponse,
     GroupListResponse,
     GroupMember,
     GroupMembersResponse,
+    GroupRole,
+    PeriodInfo,
     UpdateGroupRequest,
+    UserInfo,
 )
+from app.repositories.group_repository import GroupRepository
+from app.repositories.transaction_repository import TransactionRepository
 
 router = APIRouter(prefix="/groups", tags=["groups"])
 
@@ -34,19 +43,42 @@ router = APIRouter(prefix="/groups", tags=["groups"])
 async def get_groups(
     page: int = Query(default=1, description="Номер страницы", ge=1),
     size: int = Query(default=20, description="Размер страницы", ge=1, le=100),
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ) -> GroupListResponse:
     """Получить список групп пользователя.
 
     Args:
         page: Номер страницы
         size: Размер страницы
+        current_user: Текущий авторизованный пользователь
+        db: Сессия базы данных
 
     Returns:
         GroupListResponse: Список групп с метаданными пагинации
     """
-    # TODO: Реализовать логику получения групп из базы данных
-    # Это заглушка для демонстрации структуры API
-    return GroupListResponse(items=[], total=0, page=page, size=size)
+    repo = GroupRepository(db)
+    
+    skip = (page - 1) * size
+    groups, total = repo.get_by_user_id(current_user.id, skip=skip, limit=size)
+    
+    group_items = [
+        Group(
+            id=g.id,
+            name=g.name,
+            owner_id=g.owner_id,
+            created_at=g.created_at,
+            updated_at=g.updated_at
+        )
+        for g in groups
+    ]
+    
+    return GroupListResponse(
+        items=group_items,
+        total=total,
+        page=page,
+        size=size
+    )
 
 
 @router.post(
@@ -57,21 +89,42 @@ async def get_groups(
     description="Создание новой группы пользователей",
     operation_id="create_group",
 )
-async def create_group(request: CreateGroupRequest) -> Group:
+async def create_group(
+    request: CreateGroupRequest,
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Group:
     """Создать новую группу.
 
     Args:
         request: Данные для создания группы
+        current_user: Текущий авторизованный пользователь
+        db: Сессия базы данных
 
     Returns:
         Group: Созданная группа
     """
-    # TODO: Реализовать логику создания группы в базе данных
-    # Это заглушка для демонстрации структуры API
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Метод еще не реализован",
-    )
+    repo = GroupRepository(db)
+    
+    try:
+        group = repo.create(name=request.name, owner_id=current_user.id)
+        return Group(
+            id=group.id,
+            name=group.name,
+            owner_id=group.owner_id,
+            created_at=group.created_at,
+            updated_at=group.updated_at
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except RuntimeError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка базы данных при создании группы"
+        )
 
 
 @router.get(
@@ -81,11 +134,17 @@ async def create_group(request: CreateGroupRequest) -> Group:
     description="Получение информации о группе по её идентификатору",
     operation_id="get_group_by_id",
 )
-async def get_group_by_id(group_id: int) -> Group:
+async def get_group_by_id(
+    group_id: int,
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Group:
     """Получить группу по ID.
 
     Args:
         group_id: ID группы
+        current_user: Текущий авторизованный пользователь
+        db: Сессия базы данных
 
     Returns:
         Group: Группа
@@ -93,11 +152,28 @@ async def get_group_by_id(group_id: int) -> Group:
     Raises:
         HTTPException: Если группа не найдена или нет доступа
     """
-    # TODO: Реализовать логику получения группы из базы данных
-    # Это заглушка для демонстрации структуры API
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Группа с ID {group_id} не найдена",
+    repo = GroupRepository(db)
+    
+    group = repo.get_by_id(group_id)
+    if not group:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Группа с ID {group_id} не найдена",
+        )
+    
+    # Проверяем, является ли пользователь участником группы
+    if not repo.is_member(group_id, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нет доступа к этой группе",
+        )
+    
+    return Group(
+        id=group.id,
+        name=group.name,
+        owner_id=group.owner_id,
+        created_at=group.created_at,
+        updated_at=group.updated_at
     )
 
 
@@ -108,12 +184,19 @@ async def get_group_by_id(group_id: int) -> Group:
     description="Обновление информации о группе (только для владельца)",
     operation_id="update_group",
 )
-async def update_group(group_id: int, request: UpdateGroupRequest) -> Group:
+async def update_group(
+    group_id: int,
+    request: UpdateGroupRequest,
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Group:
     """Обновить группу.
 
     Args:
         group_id: ID группы
         request: Данные для обновления группы
+        current_user: Текущий авторизованный пользователь
+        db: Сессия базы данных
 
     Returns:
         Group: Обновленная группа
@@ -121,12 +204,33 @@ async def update_group(group_id: int, request: UpdateGroupRequest) -> Group:
     Raises:
         HTTPException: Если группа не найдена или нет прав
     """
-    # TODO: Реализовать логику обновления группы в базе данных
-    # Это заглушка для демонстрации структуры API
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Группа с ID {group_id} не найдена",
-    )
+    repo = GroupRepository(db)
+    
+    try:
+        group = repo.update(group_id, current_user.id, name=request.name)
+        if not group:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Группа с ID {group_id} не найдена или нет прав на обновление",
+            )
+        
+        return Group(
+            id=group.id,
+            name=group.name,
+            owner_id=group.owner_id,
+            created_at=group.created_at,
+            updated_at=group.updated_at
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except RuntimeError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка базы данных при обновлении группы"
+        )
 
 
 @router.delete(
@@ -136,11 +240,17 @@ async def update_group(group_id: int, request: UpdateGroupRequest) -> Group:
     description="Удаление группы (только для владельца)",
     operation_id="delete_group",
 )
-async def delete_group(group_id: int) -> Response:
+async def delete_group(
+    group_id: int,
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Response:
     """Удалить группу.
 
     Args:
         group_id: ID группы
+        current_user: Текущий авторизованный пользователь
+        db: Сессия базы данных
 
     Returns:
         Response: Пустой ответ со статусом 204
@@ -148,12 +258,21 @@ async def delete_group(group_id: int) -> Response:
     Raises:
         HTTPException: Если группа не найдена или нет прав
     """
-    # TODO: Реализовать логику удаления группы из базы данных
-    # Это заглушка для демонстрации структуры API
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Группа с ID {group_id} не найдена",
-    )
+    repo = GroupRepository(db)
+    
+    try:
+        deleted = repo.delete(group_id, current_user.id)
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Группа с ID {group_id} не найдена или нет прав на удаление",
+            )
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except RuntimeError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка базы данных при удалении группы"
+        )
 
 
 @router.get(
@@ -163,11 +282,17 @@ async def delete_group(group_id: int) -> Response:
     description="Получение списка всех участников группы",
     operation_id="get_group_members",
 )
-async def get_group_members(group_id: int) -> GroupMembersResponse:
+async def get_group_members(
+    group_id: int,
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> GroupMembersResponse:
     """Получить список участников группы.
 
     Args:
         group_id: ID группы
+        current_user: Текущий авторизованный пользователь
+        db: Сессия базы данных
 
     Returns:
         GroupMembersResponse: Список участников группы
@@ -175,12 +300,40 @@ async def get_group_members(group_id: int) -> GroupMembersResponse:
     Raises:
         HTTPException: Если группа не найдена или нет доступа
     """
-    # TODO: Реализовать логику получения участников группы из базы данных
-    # Это заглушка для демонстрации структуры API
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Группа с ID {group_id} не найдена",
-    )
+    repo = GroupRepository(db)
+    
+    # Проверяем доступ
+    if not repo.is_member(group_id, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нет доступа к этой группе",
+        )
+    
+    members = repo.get_members(group_id)
+    
+    member_items = []
+    for m in members:
+        user_info = None
+        if m.user:
+            user_info = UserInfo(
+                id=m.user.id,
+                first_name=m.user.first_name,
+                last_name=m.user.last_name,
+                login=m.user.login
+            )
+        
+        member_items.append(
+            GroupMember(
+                id=m.id,
+                user_id=m.user_id,
+                group_id=m.group_id,
+                role=GroupRole(m.role.value),
+                joined_at=m.joined_at,
+                user=user_info
+            )
+        )
+    
+    return GroupMembersResponse(members=member_items)
 
 
 @router.post(
@@ -191,12 +344,19 @@ async def get_group_members(group_id: int) -> GroupMembersResponse:
     description="Добавление нового участника в группу (только для владельца)",
     operation_id="add_group_member",
 )
-async def add_group_member(group_id: int, request: AddMemberRequest) -> GroupMember:
+async def add_group_member(
+    group_id: int,
+    request: AddMemberRequest,
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> GroupMember:
     """Добавить участника в группу.
 
     Args:
         group_id: ID группы
         request: Данные для добавления участника
+        current_user: Текущий авторизованный пользователь
+        db: Сессия базы данных
 
     Returns:
         GroupMember: Добавленный участник
@@ -204,12 +364,47 @@ async def add_group_member(group_id: int, request: AddMemberRequest) -> GroupMem
     Raises:
         HTTPException: Если группа или пользователь не найдены, или нет прав
     """
-    # TODO: Реализовать логику добавления участника в группу
-    # Это заглушка для демонстрации структуры API
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Метод еще не реализован",
-    )
+    repo = GroupRepository(db)
+    
+    try:
+        user_group = repo.add_member(
+            group_id=group_id,
+            user_id=request.user_id,
+            owner_id=current_user.id,
+            role=DBGroupRole.MEMBER
+        )
+        
+        # Получаем информацию о пользователе
+        from app.repositories.user_repository import UserRepository
+        user_repo = UserRepository(db)
+        user = user_repo.get_by_id(request.user_id)
+        user_info = None
+        if user:
+            user_info = UserInfo(
+                id=user.id,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                login=user.login
+            )
+        
+        return GroupMember(
+            id=user_group.id,
+            user_id=user_group.user_id,
+            group_id=user_group.group_id,
+            role=GroupRole(user_group.role.value),
+            joined_at=user_group.joined_at,
+            user=user_info
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except RuntimeError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка базы данных при добавлении участника"
+        )
 
 
 @router.delete(
@@ -219,12 +414,19 @@ async def add_group_member(group_id: int, request: AddMemberRequest) -> GroupMem
     description="Удаление участника из группы (только для владельца или самого участника)",
     operation_id="remove_group_member",
 )
-async def remove_group_member(group_id: int, user_id: int) -> Response:
+async def remove_group_member(
+    group_id: int,
+    user_id: int,
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Response:
     """Удалить участника из группы.
 
     Args:
         group_id: ID группы
         user_id: ID пользователя
+        current_user: Текущий авторизованный пользователь
+        db: Сессия базы данных
 
     Returns:
         Response: Пустой ответ со статусом 204
@@ -232,12 +434,26 @@ async def remove_group_member(group_id: int, user_id: int) -> Response:
     Raises:
         HTTPException: Если группа или участник не найдены, или нет прав
     """
-    # TODO: Реализовать логику удаления участника из группы
-    # Это заглушка для демонстрации структуры API
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Метод еще не реализован",
-    )
+    repo = GroupRepository(db)
+    
+    try:
+        removed = repo.remove_member(group_id, user_id, current_user.id)
+        if not removed:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Участник не найден или нет прав на удаление",
+            )
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except RuntimeError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка базы данных при удалении участника"
+        )
 
 
 @router.get(
@@ -258,6 +474,8 @@ async def get_group_analytics(
     group_by: str = Query(
         default="category", description="Группировка данных", enum=["category", "user", "date"]
     ),
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ) -> GroupAnalyticsResponse:
     """Получить аналитику по группе.
 
@@ -266,6 +484,8 @@ async def get_group_analytics(
         start_date: Дата начала периода
         end_date: Дата окончания периода
         group_by: Тип группировки данных
+        current_user: Текущий авторизованный пользователь
+        db: Сессия базы данных
 
     Returns:
         GroupAnalyticsResponse: Аналитика по группе
@@ -273,10 +493,58 @@ async def get_group_analytics(
     Raises:
         HTTPException: Если группа не найдена или нет доступа
     """
-    # TODO: Реализовать логику получения аналитики по группе
-    # Это заглушка для демонстрации структуры API
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Метод еще не реализован",
+    repo = GroupRepository(db)
+    
+    # Проверяем доступ
+    if not repo.is_member(group_id, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нет доступа к этой группе",
+        )
+    
+    # Получаем транзакции группы
+    trans_repo = TransactionRepository(db)
+    transactions, _ = trans_repo.get_all(
+        user_id=None,  # Получаем все транзакции группы
+        skip=0,
+        limit=10000,  # Большой лимит для аналитики
+        start_date=start_date,
+        end_date=end_date,
+        group_id=group_id
+    )
+    
+    # Вычисляем статистику
+    total_income = sum(t.amount for t in transactions if t.type.value == "income")
+    total_expense = sum(t.amount for t in transactions if t.type.value == "expense")
+    balance = total_income - total_expense
+    
+    # Группируем по категориям
+    category_stats = {}
+    for t in transactions:
+        if t.category not in category_stats:
+            category_stats[t.category] = {"total": 0.0, "count": 0}
+        category_stats[t.category]["total"] += t.amount
+        category_stats[t.category]["count"] += 1
+    
+    statistics = [
+        CategoryStatistic(
+            category=cat,
+            total_amount=stats["total"],
+            transaction_count=stats["count"]
+        )
+        for cat, stats in category_stats.items()
+    ]
+    
+    period = None
+    if start_date or end_date:
+        period = PeriodInfo(start_date=start_date, end_date=end_date)
+    
+    return GroupAnalyticsResponse(
+        group_id=group_id,
+        total_income=total_income,
+        total_expense=total_expense,
+        balance=balance,
+        statistics=statistics,
+        period=period
     )
 

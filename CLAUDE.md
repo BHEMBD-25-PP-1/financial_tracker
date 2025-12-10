@@ -27,7 +27,7 @@ app/
 ├── transactions/  # Управление транзакциями  
 ├── groups/        # Группы пользователей
 └── analytics/     # Аналитика и отчеты
-- **FastAPI Dependency Injection**: Используется для аутентификации (в планах)
+- **FastAPI Dependency Injection**: Используется для аутентификации
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
 
 ### Current Testing Strategy

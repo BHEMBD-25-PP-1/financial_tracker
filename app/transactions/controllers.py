@@ -10,11 +10,12 @@ from fastapi import APIRouter, HTTPException, Query, status, Depends
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from app.core.dependencies import get_current_user
+from app.db.models import User as DBUser
 from app.db.session import get_db
 from app.repositories.transaction_repository import TransactionRepository
 from app.transactions.models import (
     CreateTransactionRequest,
-    Error,
     Transaction,
     TransactionListResponse,
     TransactionType,
@@ -45,6 +46,8 @@ async def get_transactions(
     transaction_type: Optional[TransactionType] = Query(
         default=None, description="Фильтр по типу транзакции"
     ),
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ) -> TransactionListResponse:
     """Получить список транзакций с пагинацией и фильтрами.
 
@@ -56,13 +59,49 @@ async def get_transactions(
         end_date: Дата окончания периода
         group_id: Фильтр по группе
         transaction_type: Фильтр по типу транзакции
+        current_user: Текущий авторизованный пользователь
+        db: Сессия базы данных
 
     Returns:
         TransactionListResponse: Список транзакций с метаданными пагинации
     """
-    # TODO: Реализовать логику получения транзакций из базы данных
-    # Это заглушка для демонстрации структуры API
-    return TransactionListResponse(items=[], total=0, page=page, size=size)
+    repo = TransactionRepository(db)
+    
+    skip = (page - 1) * size
+    
+    transactions, total = repo.get_all(
+        user_id=current_user.id,
+        skip=skip,
+        limit=size,
+        category=category,
+        start_date=start_date,
+        end_date=end_date,
+        group_id=group_id,
+        transaction_type=transaction_type
+    )
+    
+    transaction_items = [
+        Transaction(
+            id=t.id,
+            name=t.name,
+            type=TransactionType(t.type.value),
+            category=t.category,
+            amount=t.amount,
+            date=t.date,
+            user_id=t.user_id,
+            group_id=t.group_id,
+            created_at=t.created_at,
+            updated_at=t.updated_at
+        )
+        for t in transactions
+    ]
+    
+    return TransactionListResponse(
+        items=transaction_items,
+        total=total,
+        page=page,
+        size=size
+    )
 
 
 @router.post(
@@ -74,12 +113,14 @@ async def get_transactions(
 )
 async def create_transaction(
     request: CreateTransactionRequest,
+    current_user: DBUser = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Transaction:
     """Создать новую транзакцию.
 
     Args:
         request: Данные для создания транзакции
+        current_user: Текущий авторизованный пользователь
         db: Сессия базы данных
 
     Returns:
@@ -88,21 +129,28 @@ async def create_transaction(
     repo = TransactionRepository(db)
     
     try:
-        # TODO: Получить user_id из текущего пользователя (из токена)
-        # Пока используем заглушку
-        current_user_id = 1  # Заглушка
-        
         transaction = repo.create(
             name=request.name,
             type=request.type,
             category=request.category,
             amount=request.amount,
             transaction_date=request.date,
-            user_id=current_user_id,
+            user_id=current_user.id,
             group_id=request.group_id
         )
         
-        return transaction
+        return Transaction(
+            id=transaction.id,
+            name=transaction.name,
+            type=TransactionType(transaction.type.value),
+            category=transaction.category,
+            amount=transaction.amount,
+            date=transaction.date,
+            user_id=transaction.user_id,
+            group_id=transaction.group_id,
+            created_at=transaction.created_at,
+            updated_at=transaction.updated_at
+        )
         
     except ValueError as e:
         raise HTTPException(
@@ -122,11 +170,17 @@ async def create_transaction(
     summary="Получить транзакцию по ID",
     operation_id="get_transaction_by_id",
 )
-async def get_transaction_by_id(transaction_id: int) -> Transaction:
+async def get_transaction_by_id(
+    transaction_id: int,
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Transaction:
     """Получить транзакцию по ID.
 
     Args:
         transaction_id: ID транзакции
+        current_user: Текущий авторизованный пользователь
+        db: Сессия базы данных
 
     Returns:
         Transaction: Транзакция
@@ -134,11 +188,26 @@ async def get_transaction_by_id(transaction_id: int) -> Transaction:
     Raises:
         HTTPException: Если транзакция не найдена
     """
-    # TODO: Реализовать логику получения транзакции из базы данных
-    # Это заглушка для демонстрации структуры API
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Транзакция с ID {transaction_id} не найдена",
+    repo = TransactionRepository(db)
+    
+    transaction = repo.get_by_id(transaction_id, user_id=current_user.id)
+    if not transaction:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Транзакция с ID {transaction_id} не найдена",
+        )
+    
+    return Transaction(
+        id=transaction.id,
+        name=transaction.name,
+        type=TransactionType(transaction.type.value),
+        category=transaction.category,
+        amount=transaction.amount,
+        date=transaction.date,
+        user_id=transaction.user_id,
+        group_id=transaction.group_id,
+        created_at=transaction.created_at,
+        updated_at=transaction.updated_at
     )
 
 
@@ -151,6 +220,7 @@ async def get_transaction_by_id(transaction_id: int) -> Transaction:
 async def update_transaction(
     transaction_id: int,
     request: UpdateTransactionRequest,
+    current_user: DBUser = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Transaction:
     """Обновить транзакцию.
@@ -158,6 +228,7 @@ async def update_transaction(
     Args:
         transaction_id: ID транзакции
         request: Данные для обновления транзакции
+        current_user: Текущий авторизованный пользователь
         db: Сессия базы данных
 
     Returns:
@@ -167,9 +238,6 @@ async def update_transaction(
         HTTPException: Если транзакция не найдена
     """
     repo = TransactionRepository(db)
-    
-    # TODO: Получить user_id из текущего пользователя (из токена)
-    current_user_id = 1  # Заглушка
     
     # Подготавливаем данные для обновления
     update_data = {}
@@ -183,8 +251,8 @@ async def update_transaction(
     if request.category is not None:
         update_data['category'] = request.category
     
-    if request.transaction_date is not None:
-        update_data['date'] = request.transaction_date
+    if request.date is not None:
+        update_data['date'] = request.date
     
     if request.type is not None:
         update_data['type'] = request.type
@@ -195,7 +263,7 @@ async def update_transaction(
     try:
         transaction = repo.update(
             transaction_id=transaction_id,
-            user_id=current_user_id,
+            user_id=current_user.id,
             **update_data
         )
         
@@ -205,7 +273,18 @@ async def update_transaction(
                 detail=f"Транзакция с ID {transaction_id} не найдена"
             )
         
-        return transaction
+        return Transaction(
+            id=transaction.id,
+            name=transaction.name,
+            type=TransactionType(transaction.type.value),
+            category=transaction.category,
+            amount=transaction.amount,
+            date=transaction.date,
+            user_id=transaction.user_id,
+            group_id=transaction.group_id,
+            created_at=transaction.created_at,
+            updated_at=transaction.updated_at
+        )
         
     except ValueError as e:
         raise HTTPException(
@@ -225,11 +304,17 @@ async def update_transaction(
     summary="Удалить транзакцию",
     operation_id="delete_transaction",
 )
-async def delete_transaction(transaction_id: int) -> Response:
+async def delete_transaction(
+    transaction_id: int,
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Response:
     """Удалить транзакцию.
 
     Args:
         transaction_id: ID транзакции
+        current_user: Текущий авторизованный пользователь
+        db: Сессия базы данных
 
     Returns:
         Response: Пустой ответ со статусом 204
@@ -237,10 +322,19 @@ async def delete_transaction(transaction_id: int) -> Response:
     Raises:
         HTTPException: Если транзакция не найдена
     """
-    # TODO: Реализовать логику удаления транзакции из базы данных
-    # Это заглушка для демонстрации структуры API
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Транзакция с ID {transaction_id} не найдена",
-    )
+    repo = TransactionRepository(db)
+    
+    try:
+        deleted = repo.delete(transaction_id, user_id=current_user.id)
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Транзакция с ID {transaction_id} не найдена",
+            )
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except RuntimeError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка базы данных при удалении транзакции"
+        )
 

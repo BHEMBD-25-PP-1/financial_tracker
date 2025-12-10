@@ -1,6 +1,5 @@
 """Репозиторий для работы с транзакциями в базе данных."""
 
-import re
 from contextlib import contextmanager
 from datetime import date
 from typing import List, Optional
@@ -137,16 +136,84 @@ class TransactionRepository(BaseRepository[Transaction]):
             raise
 
     def get_by_id(self, transaction_id: int, user_id: Optional[int] = None) -> Optional[Transaction]:
-        """Получить транзакцию по ID (заглушка)."""
-        # TODO: Реализовать получение транзакции по ID
-        self.logger.debug(f"Fetching transaction by id: {transaction_id} (STUB)")
-        return None
+        """Получить транзакцию по ID."""
+        self.logger.debug(f"Fetching transaction by id: {transaction_id}")
+        
+        try:
+            query = self.db.query(Transaction).filter(Transaction.id == transaction_id)
+            if user_id:
+                query = query.filter(Transaction.user_id == user_id)
+            
+            transaction = query.first()
+            if transaction:
+                self.logger.debug(f"Transaction found: id={transaction.id}")
+            else:
+                self.logger.debug(f"Transaction not found: id={transaction_id}")
+            return transaction
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error while fetching transaction by id {transaction_id}: {e}")
+            raise RuntimeError(f"Database error: {e}") from e
 
-    def get_all(self) -> List[Transaction]:
-        """Получить все транзакции (заглушка)."""
-        # TODO: Реализовать получение всех транзакций
-        self.logger.debug("Fetching all transactions (STUB)")
-        return []
+    def get_all(
+        self,
+        user_id: Optional[int] = None,
+        skip: int = 0,
+        limit: int = 100,
+        category: Optional[str] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        group_id: Optional[int] = None,
+        transaction_type: Optional[TransactionType] = None
+    ) -> tuple[List[Transaction], int]:
+        """Получить транзакции с фильтрацией и пагинацией.
+        
+        Args:
+            user_id: ID пользователя
+            skip: Количество пропущенных записей
+            limit: Максимальное количество записей
+            category: Фильтр по категории
+            start_date: Дата начала периода
+            end_date: Дата окончания периода
+            group_id: Фильтр по группе
+            transaction_type: Фильтр по типу транзакции
+            
+        Returns:
+            tuple: (Список транзакций, общее количество)
+        """
+        self.logger.debug(f"Fetching transactions: user_id={user_id}, skip={skip}, limit={limit}")
+        
+        try:
+            query = self.db.query(Transaction)
+            
+            if user_id:
+                query = query.filter(Transaction.user_id == user_id)
+            
+            if category:
+                query = query.filter(Transaction.category == category)
+            
+            if start_date:
+                query = query.filter(Transaction.date >= start_date)
+            
+            if end_date:
+                query = query.filter(Transaction.date <= end_date)
+            
+            if group_id is not None:
+                query = query.filter(Transaction.group_id == group_id)
+            
+            if transaction_type:
+                query = query.filter(Transaction.type == transaction_type)
+            
+            # Получаем общее количество
+            total = query.count()
+            
+            # Применяем пагинацию и сортировку
+            transactions = query.order_by(Transaction.date.desc(), Transaction.id.desc()).offset(skip).limit(limit).all()
+            
+            self.logger.debug(f"Found {len(transactions)} transactions (total: {total})")
+            return transactions, total
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error while fetching transactions: {e}")
+            raise RuntimeError(f"Database error: {e}") from e
 
     def update(
         self,
@@ -159,7 +226,6 @@ class TransactionRepository(BaseRepository[Transaction]):
         
         try:
             with self._transaction():
-                # Временно получаем транзакцию напрямую (так как get_by_id - заглушка)
                 query = self.db.query(Transaction).filter(Transaction.id == transaction_id)
                 if user_id:
                     query = query.filter(Transaction.user_id == user_id)
@@ -221,10 +287,27 @@ class TransactionRepository(BaseRepository[Transaction]):
             raise RuntimeError(f"Database error: {e}") from e
 
     def delete(self, transaction_id: int, user_id: int) -> bool:
-        """Удалить транзакцию (заглушка)."""
-        # TODO: Реализовать удаление транзакции
-        self.logger.debug(f"Deleting transaction: id={transaction_id} (STUB)")
-        return False
+        """Удалить транзакцию."""
+        self.logger.info(f"Deleting transaction: id={transaction_id}, user_id={user_id}")
+        
+        try:
+            with self._transaction():
+                query = self.db.query(Transaction).filter(Transaction.id == transaction_id)
+                if user_id:
+                    query = query.filter(Transaction.user_id == user_id)
+                
+                transaction = query.first()
+                if not transaction:
+                    self.logger.warning(f"Transaction not found or access denied: id={transaction_id}, user_id={user_id}")
+                    return False
+                
+                self.db.delete(transaction)
+                self.db.flush()
+                self.logger.info(f"Transaction deleted successfully: id={transaction_id}")
+                return True
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error while deleting transaction {transaction_id}: {e}")
+            raise RuntimeError(f"Database error: {e}") from e
 
     def close(self):
         """Закрыть сессию базы данных."""
