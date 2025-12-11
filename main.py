@@ -9,9 +9,6 @@ app = FastAPI(
     title="Finance Tracker API",
     version="1.0.0",
     description="API для управления транзакциями",
-    swagger_ui_init_oauth={
-        "usePkceWithAuthorizationCodeGrant": False,
-    },
 )
 
 # Подключение версионированного API

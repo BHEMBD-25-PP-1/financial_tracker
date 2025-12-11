@@ -30,20 +30,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         bool: True если пароль верный
     """
-    try:
-        return pwd_context.verify(plain_password, hashed_password)
-    except (ValueError, AttributeError, TypeError):
-        # Обход проблемы совместимости passlib с bcrypt 5.0.0
-        import bcrypt
-        password_bytes = plain_password.encode('utf-8')
-        # Обрезаем пароль до 72 байт если нужно (ограничение bcrypt)
-        if len(password_bytes) > 72:
-            password_bytes = password_bytes[:72]
-        hash_bytes = hashed_password.encode('utf-8')
-        try:
-            return bcrypt.checkpw(password_bytes, hash_bytes)
-        except Exception:
-            return False
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
@@ -55,19 +42,7 @@ def get_password_hash(password: str) -> str:
     Returns:
         str: Хешированный пароль
     """
-    # Обход проблемы совместимости passlib с bcrypt 5.0.0
-    try:
-        return pwd_context.hash(password)
-    except (ValueError, AttributeError):
-        # Если возникает ошибка, используем прямой вызов bcrypt
-        import bcrypt
-        password_bytes = password.encode('utf-8')
-        # Обрезаем пароль до 72 байт если нужно (ограничение bcrypt)
-        if len(password_bytes) > 72:
-            password_bytes = password_bytes[:72]
-        salt = bcrypt.gensalt()
-        hashed = bcrypt.hashpw(password_bytes, salt)
-        return hashed.decode('utf-8')
+    return pwd_context.hash(password)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
