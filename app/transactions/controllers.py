@@ -19,6 +19,7 @@ from app.transactions.models import (
     Transaction,
     TransactionListResponse,
     TransactionType,
+    TransactionCategory,
     UpdateTransactionRequest,
 )
 
@@ -35,7 +36,7 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 async def get_transactions(
     page: int = Query(default=1, description="Номер страницы", ge=1),
     size: int = Query(default=20, description="Размер страницы", ge=1, le=100),
-    category: Optional[str] = Query(default=None, description="Фильтр по категории"),
+    category: Optional[TransactionCategory] = Query(default=None, description="Фильтр по категории"),
     start_date: Optional[date] = Query(
         default=None, description="Дата начала периода (YYYY-MM-DD)"
     ),
@@ -65,43 +66,75 @@ async def get_transactions(
     Returns:
         TransactionListResponse: Список транзакций с метаданными пагинации
     """
-    repo = TransactionRepository(db)
-    
-    skip = (page - 1) * size
-    
-    transactions, total = repo.get_all(
-        user_id=current_user.id,
-        skip=skip,
-        limit=size,
-        category=category,
-        start_date=start_date,
-        end_date=end_date,
-        group_id=group_id,
-        transaction_type=transaction_type
-    )
-    
-    transaction_items = [
-        Transaction(
-            id=t.id,
-            name=t.name,
-            type=TransactionType(t.type.value),
-            category=t.category,
-            amount=t.amount,
-            date=t.date,
-            user_id=t.user_id,
-            group_id=t.group_id,
-            created_at=t.created_at,
-            updated_at=t.updated_at
+    try:
+        repo = TransactionRepository(db)
+        
+        skip = (page - 1) * size
+        
+        # Преобразуем enum в значение для репозитория
+        category_value = category.value if category else None
+        transaction_type_value = transaction_type.value if transaction_type else None
+        
+        transactions, total = repo.get_all(
+            user_id=current_user.id,
+            skip=skip,
+            limit=size,
+            category=category_value,
+            start_date=start_date,
+            end_date=end_date,
+            group_id=group_id,
+            transaction_type=transaction_type_value
         )
-        for t in transactions
-    ]
-    
-    return TransactionListResponse(
-        items=transaction_items,
-        total=total,
-        page=page,
-        size=size
-    )
+        
+        transaction_items = []
+        for t in transactions:
+            # Преобразуем тип транзакции из enum БД в enum модели
+            # t.type может быть enum из app.db.models.TransactionType
+            if hasattr(t.type, 'value'):
+                # Это enum из БД, берем его значение
+                type_value = t.type.value
+            elif isinstance(t.type, str):
+                # Это уже строка
+                type_value = t.type
+            else:
+                # Пытаемся преобразовать напрямую
+                type_value = str(t.type)
+            
+            trans_type = TransactionType(type_value)
+            
+            # Преобразуем категорию (она всегда строка в БД)
+            trans_category = TransactionCategory(t.category)
+            
+            transaction_items.append(
+                Transaction(
+                    id=t.id,
+                    name=t.name,
+                    type=trans_type,
+                    category=trans_category,
+                    amount=t.amount,
+                    date=t.date,
+                    user_id=t.user_id,
+                    group_id=t.group_id,
+                    created_at=t.created_at,
+                    updated_at=t.updated_at
+                )
+            )
+        
+        return TransactionListResponse(
+            items=transaction_items,
+            total=total,
+            page=page,
+            size=size
+        )
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error in get_transactions: {e}")
+        print(error_details)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при получении транзакций: {str(e)}"
+        )
 
 
 @router.post(
@@ -132,7 +165,7 @@ async def create_transaction(
         transaction = repo.create(
             name=request.name,
             type=request.type,
-            category=request.category,
+            category=request.category.value,
             amount=request.amount,
             transaction_date=request.date,
             user_id=current_user.id,
@@ -143,7 +176,7 @@ async def create_transaction(
             id=transaction.id,
             name=transaction.name,
             type=TransactionType(transaction.type.value),
-            category=transaction.category,
+            category=TransactionCategory(transaction.category),
             amount=transaction.amount,
             date=transaction.date,
             user_id=transaction.user_id,
@@ -201,7 +234,7 @@ async def get_transaction_by_id(
         id=transaction.id,
         name=transaction.name,
         type=TransactionType(transaction.type.value),
-        category=transaction.category,
+        category=TransactionCategory(transaction.category),
         amount=transaction.amount,
         date=transaction.date,
         user_id=transaction.user_id,
@@ -249,7 +282,7 @@ async def update_transaction(
         update_data['amount'] = request.amount
     
     if request.category is not None:
-        update_data['category'] = request.category
+        update_data['category'] = request.category.value
     
     if request.date is not None:
         update_data['date'] = request.date
@@ -277,7 +310,7 @@ async def update_transaction(
             id=transaction.id,
             name=transaction.name,
             type=TransactionType(transaction.type.value),
-            category=transaction.category,
+            category=TransactionCategory(transaction.category),
             amount=transaction.amount,
             date=transaction.date,
             user_id=transaction.user_id,

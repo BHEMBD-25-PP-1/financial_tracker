@@ -106,32 +106,44 @@ async def login_user(
     Raises:
         HTTPException: Если неверный логин или пароль
     """
-    repo = UserRepository(db)
-    
-    user = repo.verify_user(request.login, request.password)
-    if not user:
+    try:
+        repo = UserRepository(db)
+        
+        user = repo.verify_user(request.login, request.password)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Неверный логин или пароль"
+            )
+        
+        # Создаем токены (sub должен быть строкой для jose)
+        access_token = create_access_token(data={"sub": str(user.id)})
+        refresh_token = create_refresh_token(data={"sub": str(user.id)})
+        
+        return LoginResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            user=User(
+                id=user.id,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                login=user.login,
+                created_at=user.created_at,
+                updated_at=user.updated_at
+            )
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error in login: {e}")
+        print(error_details)
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверный логин или пароль"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при авторизации: {str(e)}"
         )
-    
-    # Создаем токены
-    access_token = create_access_token(data={"sub": user.id})
-    refresh_token = create_refresh_token(data={"sub": user.id})
-    
-    return LoginResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        user=User(
-            id=user.id,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            login=user.login,
-            created_at=user.created_at,
-            updated_at=user.updated_at
-        )
-    )
 
 
 @router.post(
@@ -187,9 +199,9 @@ async def refresh_token(
             detail="Пользователь не найден"
         )
     
-    # Создаем новые токены
-    access_token = create_access_token(data={"sub": user.id})
-    refresh_token = create_refresh_token(data={"sub": user.id})
+    # Создаем новые токены (sub должен быть строкой для jose)
+    access_token = create_access_token(data={"sub": str(user.id)})
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
     return TokenResponse(
         access_token=access_token,

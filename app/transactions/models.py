@@ -3,7 +3,7 @@
 Автоматически сгенерировано из openapi-specs/transactions-service.yaml
 """
 
-from datetime import date, datetime
+from datetime import date as dt_date, datetime
 from enum import Enum
 from typing import List, Optional
 
@@ -17,15 +17,36 @@ class TransactionType(str, Enum):
     EXPENSE = "expense"
 
 
+class TransactionCategory(str, Enum):
+    """Категория транзакции."""
+
+    PRODUCTS = "Продукты"
+    CLOTHING_AND_SHOES = "Одежда и обувь"
+    HOME_AND_REPAIR = "Дом и ремонт"
+    HOUSING = "Жилье"
+    EDUCATION = "Образование"
+    WORK = "Работа"
+    FOOD = "Еда"
+    LEISURE = "Досуг"
+    SHOPPING = "Покупки"
+    TRAVEL = "Путешествия"
+    TRANSPORT = "Транспорт"
+    TRANSFERS = "Переводы"
+    COSMETICS_AND_HOUSEHOLD = "Косметика и бытовая химия"
+    SPORTS = "Спорт"
+    ENTERTAINMENT = "Развлечения"
+    CAFE_AND_RESTAURANTS = "Кафе и рестораны"
+
+
 class Transaction(BaseModel):
     """Модель транзакции."""
 
     id: int
     name: str
     type: TransactionType
-    category: str
+    category: TransactionCategory
     amount: float
-    date: date
+    date: dt_date
     user_id: int
     group_id: Optional[int] = Field(None, description="ID группы, если транзакция относится к группе")
     created_at: datetime
@@ -39,7 +60,7 @@ class Transaction(BaseModel):
                 "id": 1,
                 "name": "Покупка продуктов",
                 "type": "expense",
-                "category": "Еда",
+                "category": "Продукты",
                 "amount": 1500.50,
                 "date": "2024-01-15",
                 "user_id": 1,
@@ -55,9 +76,9 @@ class CreateTransactionRequest(BaseModel):
 
     name: str
     type: TransactionType
-    category: str
+    category: TransactionCategory
     amount: float
-    date: date
+    date: dt_date
     group_id: Optional[int] = Field(None, description="ID группы, если транзакция относится к группе")
 
     class Config:
@@ -67,7 +88,7 @@ class CreateTransactionRequest(BaseModel):
             "example": {
                 "name": "Покупка продуктов",
                 "type": "expense",
-                "category": "Еда",
+                "category": "Продукты",
                 "amount": 1500.50,
                 "date": "2024-01-15",
                 "group_id": None,
@@ -80,9 +101,10 @@ class UpdateTransactionRequest(BaseModel):
 
     name: Optional[str] = None
     type: Optional[TransactionType] = None
-    category: Optional[str] = None
+    category: Optional[TransactionCategory] = None
     amount: Optional[float] = None
-    date: Optional[date] = None
+    # Дата как optional date (null или YYYY-MM-DD)
+    date: Optional[dt_date] = None
     group_id: Optional[int] = Field(None, description="ID группы, если транзакция относится к группе")
 
     class Config:
@@ -92,7 +114,7 @@ class UpdateTransactionRequest(BaseModel):
             "example": {
                 "name": "Покупка продуктов",
                 "type": "expense",
-                "category": "Еда",
+                "category": "Продукты",
                 "amount": 1500.50,
                 "date": "2024-01-15",
                 "group_id": None,
