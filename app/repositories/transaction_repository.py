@@ -7,7 +7,7 @@ from typing import List, Optional
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.db.models import Transaction, User, Group, UserGroup, TransactionType
+from app.db.models import Transaction, User, Group, TransactionType
 from app.db.session import SessionLocal
 from app.repositories.base_repository import BaseRepository
 
@@ -104,19 +104,11 @@ class TransactionRepository(BaseRepository[Transaction]):
                 if not user:
                     raise ValueError(f"User with ID {user_id} not found")
                 
-                # Проверяем существование группы и принадлежность пользователя к группе, если указана
+                # Проверяем существование группы, если указана
                 if group_id:
                     group = self.db.query(Group).filter(Group.id == group_id).first()
                     if not group:
                         raise ValueError(f"Group with ID {group_id} not found")
-                    
-                    # Проверяем, является ли пользователь участником группы
-                    user_group = self.db.query(UserGroup).filter(
-                        UserGroup.group_id == group_id,
-                        UserGroup.user_id == user_id
-                    ).first()
-                    if not user_group:
-                        raise ValueError(f"User {user_id} is not a member of group {group_id}")
                 
                 transaction = Transaction(
                     name=name.strip(),
@@ -209,15 +201,7 @@ class TransactionRepository(BaseRepository[Transaction]):
                 query = query.filter(Transaction.group_id == group_id)
             
             if transaction_type:
-                # Преобразуем строку в enum, если нужно
-                if isinstance(transaction_type, str):
-                    try:
-                        transaction_type = TransactionType(transaction_type)
-                    except ValueError:
-                        self.logger.warning(f"Invalid transaction_type: {transaction_type}")
-                        transaction_type = None
-                if transaction_type:
-                    query = query.filter(Transaction.type == transaction_type)
+                query = query.filter(Transaction.type == transaction_type)
             
             # Получаем общее количество
             total = query.count()
@@ -284,14 +268,6 @@ class TransactionRepository(BaseRepository[Transaction]):
                         group = self.db.query(Group).filter(Group.id == group_id).first()
                         if not group:
                             raise ValueError(f"Group with ID {group_id} not found")
-                        
-                        # Проверяем, является ли пользователь участником группы
-                        user_group = self.db.query(UserGroup).filter(
-                            UserGroup.group_id == group_id,
-                            UserGroup.user_id == user_id
-                        ).first()
-                        if not user_group:
-                            raise ValueError(f"User {user_id} is not a member of group {group_id}")
                     update_data['group_id'] = group_id
                 
                 # Применяем обновления

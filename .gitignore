@@ -34,8 +34,3 @@ generated/
 # Logs
 logs/
 *.log
-# Scripts for test data seeding
-scripts/
-
-# Changelog files
-CHANGELOG*.md
