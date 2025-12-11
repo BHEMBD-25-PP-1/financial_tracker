@@ -158,7 +158,7 @@ class UserRepository(BaseRepository[User]):
         try:
             user = self.db.query(User).filter(User.id == user_id).first()
             if user:
-                self.logger.debug(f"User found: id={user.id}, email={user.email}")
+                self.logger.debug(f"User found: id={user.id}, login={user.login}")
             else:
                 self.logger.debug(f"User not found: id={user_id}")
             return user

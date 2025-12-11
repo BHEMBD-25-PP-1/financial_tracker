@@ -10,7 +10,7 @@ from app.core.security import decode_token
 from app.db.session import get_db
 from app.repositories.user_repository import UserRepository
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 
 async def get_current_user(
@@ -41,14 +41,14 @@ async def get_current_user(
     if payload is None:
         raise credentials_exception
 
-    user_id: Optional[int] = payload.get("sub")
+    user_id_str: Optional[str] = payload.get("sub")
     token_type: Optional[str] = payload.get("type")
 
-    if user_id is None or token_type != "access":
+    if user_id_str is None or token_type != "access":
         raise credentials_exception
 
     repo = UserRepository(db)
-    user = repo.get_by_id(user_id)
+    user = repo.get_by_id(int(user_id_str))
     if user is None:
         raise credentials_exception
 

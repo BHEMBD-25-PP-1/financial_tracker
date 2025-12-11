@@ -4,6 +4,7 @@
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.auth.models import (
@@ -115,9 +116,9 @@ async def login_user(
             detail="Неверный логин или пароль"
         )
     
-    # Создаем токены
-    access_token = create_access_token(data={"sub": user.id})
-    refresh_token = create_refresh_token(data={"sub": user.id})
+    # Создаем токены (sub должен быть строкой по стандарту JWT)
+    access_token = create_access_token(data={"sub": str(user.id)})
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
     return LoginResponse(
         access_token=access_token,
@@ -131,6 +132,47 @@ async def login_user(
             created_at=user.created_at,
             updated_at=user.updated_at
         )
+    )
+
+
+@router.post(
+    "/token",
+    response_model=TokenResponse,
+    summary="OAuth2 авторизация",
+    description="Авторизация через OAuth2 password flow (для Swagger UI)",
+    operation_id="oauth2_login",
+)
+async def oauth2_login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+) -> TokenResponse:
+    """OAuth2 авторизация (для Swagger Authorize).
+
+    Args:
+        form_data: username и password в form-data формате
+        db: Сессия базы данных
+
+    Returns:
+        TokenResponse: Токены доступа
+    """
+    repo = UserRepository(db)
+    
+    # OAuth2 использует поле username, у нас это login
+    user = repo.verify_user(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверный логин или пароль",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token = create_access_token(data={"sub": str(user.id)})
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
+    
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer"
     )
 
 
@@ -171,8 +213,8 @@ async def refresh_token(
             detail="Неверный тип токена"
         )
     
-    user_id = payload.get("sub")
-    if user_id is None:
+    user_id_str = payload.get("sub")
+    if user_id_str is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Неверный формат токена"
@@ -180,16 +222,16 @@ async def refresh_token(
     
     # Проверяем существование пользователя
     repo = UserRepository(db)
-    user = repo.get_by_id(user_id)
+    user = repo.get_by_id(int(user_id_str))
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Пользователь не найден"
         )
     
-    # Создаем новые токены
-    access_token = create_access_token(data={"sub": user.id})
-    refresh_token = create_refresh_token(data={"sub": user.id})
+    # Создаем новые токены (sub должен быть строкой по стандарту JWT)
+    access_token = create_access_token(data={"sub": str(user.id)})
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
     return TokenResponse(
         access_token=access_token,
