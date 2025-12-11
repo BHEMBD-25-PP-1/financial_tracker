@@ -48,7 +48,7 @@ class Transaction(BaseModel):
     __tablename__ = "transactions"
 
     name = Column(String(255), nullable=False)
-    type = Column(Enum(TransactionType), nullable=False)
+    type = Column(Enum(TransactionType, values_callable=lambda x: [e.value for e in x]), nullable=False)
     category = Column(String(100), nullable=False)
     amount = Column(Float, nullable=False)
     date = Column(Date, nullable=False)
@@ -89,7 +89,7 @@ class UserGroup(BaseModel):
 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
-    role = Column(Enum(GroupRole), nullable=False, default=GroupRole.MEMBER)
+    role = Column(Enum(GroupRole, values_callable=lambda x: [e.value for e in x]), nullable=False, default=GroupRole.MEMBER)
     joined_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships

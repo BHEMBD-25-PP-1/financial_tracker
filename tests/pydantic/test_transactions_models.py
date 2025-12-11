@@ -46,7 +46,7 @@ def test_transaction_list_response_types():
         id=1,
         name="A",
         type="income",
-        category="Категория",
+        category="Продукты",
         amount=1.0,
         date=datetime.date.today(),
         user_id=1,
