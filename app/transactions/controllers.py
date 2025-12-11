@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_current_user
 from app.db.models import User as DBUser
 from app.db.session import get_db
-from app.repositories.transaction_repository import TransactionRepository
+from app.transactions.service import TransactionService
 from app.transactions.models import (
     CreateTransactionRequest,
     Transaction,
@@ -67,58 +67,18 @@ async def get_transactions(
         TransactionListResponse: Список транзакций с метаданными пагинации
     """
     try:
-        repo = TransactionRepository(db)
+        service = TransactionService(db)
         
-        skip = (page - 1) * size
-        
-        # Преобразуем enum в значение для репозитория
-        category_value = category.value if category else None
-        transaction_type_value = transaction_type.value if transaction_type else None
-        
-        transactions, total = repo.get_all(
+        transaction_items, total = service.get_transactions(
             user_id=current_user.id,
-            skip=skip,
-            limit=size,
-            category=category_value,
+            page=page,
+            size=size,
+            category=category,
             start_date=start_date,
             end_date=end_date,
             group_id=group_id,
-            transaction_type=transaction_type_value
+            transaction_type=transaction_type
         )
-        
-        transaction_items = []
-        for t in transactions:
-            # Преобразуем тип транзакции из enum БД в enum модели
-            # t.type может быть enum из app.db.models.TransactionType
-            if hasattr(t.type, 'value'):
-                # Это enum из БД, берем его значение
-                type_value = t.type.value
-            elif isinstance(t.type, str):
-                # Это уже строка
-                type_value = t.type
-            else:
-                # Пытаемся преобразовать напрямую
-                type_value = str(t.type)
-            
-            trans_type = TransactionType(type_value)
-            
-            # Преобразуем категорию (она всегда строка в БД)
-            trans_category = TransactionCategory(t.category)
-            
-            transaction_items.append(
-                Transaction(
-                    id=t.id,
-                    name=t.name,
-                    type=trans_type,
-                    category=trans_category,
-                    amount=t.amount,
-                    date=t.date,
-                    user_id=t.user_id,
-                    group_id=t.group_id,
-                    created_at=t.created_at,
-                    updated_at=t.updated_at
-                )
-            )
         
         return TransactionListResponse(
             items=transaction_items,
@@ -159,31 +119,19 @@ async def create_transaction(
     Returns:
         Transaction: Созданная транзакция
     """
-    repo = TransactionRepository(db)
+    service = TransactionService(db)
     
     try:
-        transaction = repo.create(
+        transaction = service.create_transaction(
             name=request.name,
-            type=request.type,
-            category=request.category.value,
+            transaction_type=request.type,
+            category=request.category,
             amount=request.amount,
             transaction_date=request.date,
             user_id=current_user.id,
             group_id=request.group_id
         )
-        
-        return Transaction(
-            id=transaction.id,
-            name=transaction.name,
-            type=TransactionType(transaction.type.value),
-            category=TransactionCategory(transaction.category),
-            amount=transaction.amount,
-            date=transaction.date,
-            user_id=transaction.user_id,
-            group_id=transaction.group_id,
-            created_at=transaction.created_at,
-            updated_at=transaction.updated_at
-        )
+        return transaction
         
     except ValueError as e:
         raise HTTPException(
@@ -221,27 +169,16 @@ async def get_transaction_by_id(
     Raises:
         HTTPException: Если транзакция не найдена
     """
-    repo = TransactionRepository(db)
+    service = TransactionService(db)
     
-    transaction = repo.get_by_id(transaction_id, user_id=current_user.id)
+    transaction = service.get_transaction_by_id(transaction_id, current_user.id)
     if not transaction:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Транзакция с ID {transaction_id} не найдена",
         )
     
-    return Transaction(
-        id=transaction.id,
-        name=transaction.name,
-        type=TransactionType(transaction.type.value),
-        category=TransactionCategory(transaction.category),
-        amount=transaction.amount,
-        date=transaction.date,
-        user_id=transaction.user_id,
-        group_id=transaction.group_id,
-        created_at=transaction.created_at,
-        updated_at=transaction.updated_at
-    )
+    return transaction
 
 
 @router.put(
@@ -270,34 +207,18 @@ async def update_transaction(
     Raises:
         HTTPException: Если транзакция не найдена
     """
-    repo = TransactionRepository(db)
-    
-    # Подготавливаем данные для обновления
-    update_data = {}
-    
-    if request.name is not None:
-        update_data['name'] = request.name
-    
-    if request.amount is not None:
-        update_data['amount'] = request.amount
-    
-    if request.category is not None:
-        update_data['category'] = request.category.value
-    
-    if request.date is not None:
-        update_data['date'] = request.date
-    
-    if request.type is not None:
-        update_data['type'] = request.type
-    
-    if request.group_id is not None:
-        update_data['group_id'] = request.group_id
+    service = TransactionService(db)
     
     try:
-        transaction = repo.update(
+        transaction = service.update_transaction(
             transaction_id=transaction_id,
             user_id=current_user.id,
-            **update_data
+            name=request.name,
+            amount=request.amount,
+            category=request.category,
+            date=request.date,
+            transaction_type=request.type,
+            group_id=request.group_id
         )
         
         if not transaction:
@@ -306,18 +227,7 @@ async def update_transaction(
                 detail=f"Транзакция с ID {transaction_id} не найдена"
             )
         
-        return Transaction(
-            id=transaction.id,
-            name=transaction.name,
-            type=TransactionType(transaction.type.value),
-            category=TransactionCategory(transaction.category),
-            amount=transaction.amount,
-            date=transaction.date,
-            user_id=transaction.user_id,
-            group_id=transaction.group_id,
-            created_at=transaction.created_at,
-            updated_at=transaction.updated_at
-        )
+        return transaction
         
     except ValueError as e:
         raise HTTPException(
@@ -355,10 +265,10 @@ async def delete_transaction(
     Raises:
         HTTPException: Если транзакция не найдена
     """
-    repo = TransactionRepository(db)
+    service = TransactionService(db)
     
     try:
-        deleted = repo.delete(transaction_id, user_id=current_user.id)
+        deleted = service.delete_transaction(transaction_id, current_user.id)
         if not deleted:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
