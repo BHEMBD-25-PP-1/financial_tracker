@@ -446,8 +446,12 @@ components:
           minLength: 1
           maxLength: 200
           example: "Семья Ивановых"
+        owner_id:
+          type: integer
+          example: 1  
       required:
         - name
+        - owner_id
 
     UpdateGroupRequest:
       type: object

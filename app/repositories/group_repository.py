@@ -81,7 +81,7 @@ class GroupRepository(BaseRepository[Group]):
                 user_group = UserGroup(
                     group_id=group.id,
                     user_id=owner_id,
-                    role=GroupRole.OWNER
+                    role=GroupRole.owner
                 )
                 self.db.add(user_group)
                 self.db.flush()
@@ -238,7 +238,7 @@ class GroupRepository(BaseRepository[Group]):
             self.logger.error(f"Database error while fetching members: {e}")
             raise RuntimeError(f"Database error: {e}") from e
 
-    def add_member(self, group_id: int, user_id: int, owner_id: int, role: GroupRole = GroupRole.MEMBER) -> UserGroup:
+    def add_member(self, group_id: int, user_id: int, owner_id: int, role: GroupRole = GroupRole.member) -> UserGroup:
         """Добавить участника в группу.
 
         Args:
@@ -319,7 +319,7 @@ class GroupRepository(BaseRepository[Group]):
                     return False
 
                 # Нельзя удалить владельца группы
-                if user_group.role == GroupRole.OWNER:
+                if user_group.role == GroupRole.owner:
                     raise ValueError("Cannot remove group owner")
 
                 self.db.delete(user_group)

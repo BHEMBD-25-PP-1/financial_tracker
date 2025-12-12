@@ -18,8 +18,8 @@ class TransactionType(enum.Enum):
 class GroupRole(enum.Enum):
     """Роль участника группы."""
 
-    OWNER = "owner"
-    MEMBER = "member"
+    owner = "owner"
+    member = "member"
 
 
 class User(BaseModel):
@@ -89,7 +89,7 @@ class UserGroup(BaseModel):
 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
-    role = Column(Enum(GroupRole), nullable=False, default=GroupRole.MEMBER)
+    role = Column(Enum(GroupRole), nullable=False, default=GroupRole.member)
     joined_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships

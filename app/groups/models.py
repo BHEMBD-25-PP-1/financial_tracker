@@ -13,8 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field
 class GroupRole(str, Enum):
     """Роль участника группы."""
 
-    OWNER = "owner"
-    MEMBER = "member"
+    owner = "owner"
+    member = "member"
 
 
 class Group(BaseModel):
@@ -42,12 +42,14 @@ class Group(BaseModel):
 class CreateGroupRequest(BaseModel):
     """Запрос на создание группы."""
 
+    owner_id: int = Field(..., example=1)
     name: str = Field(..., min_length=1, max_length=200, examples=["Семья Ивановых"])
-
+      
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "name": "Семья Ивановых",
+                "owner_id": 1,
             }
         }
     )
