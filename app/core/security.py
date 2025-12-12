@@ -32,13 +32,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     if not plain_password or not hashed_password:
         return False
-    # Убеждаемся, что пароль - это строка и не превышает 72 байта
-    if isinstance(plain_password, bytes):
-        plain_password = plain_password.decode('utf-8')
     # Обрезаем пароль до 72 байт для совместимости с bcrypt
-    plain_password_bytes = plain_password.encode('utf-8')
-    if len(plain_password_bytes) > 72:
-        plain_password = plain_password_bytes[:72].decode('utf-8', errors='ignore')
+    password_bytes = plain_password.encode('utf-8') if isinstance(plain_password, str) else plain_password
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    plain_password = password_bytes.decode('utf-8', errors='ignore')
     try:
         return pwd_context.verify(plain_password, hashed_password)
     except Exception:
@@ -46,25 +44,17 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def get_password_hash(password: str) -> str:
-    """Получить хеш пароля.
-
-    Args:
-        password: Пароль в открытом виде
-
-    Returns:
-        str: Хешированный пароль
-    """
     if not password:
         raise ValueError("Password cannot be empty")
-    # Убеждаемся, что пароль - это строка
-    if isinstance(password, bytes):
-        password = password.decode('utf-8')
-    # Обрезаем пароль до 72 байт для совместимости с bcrypt
-    password_bytes = password.encode('utf-8')
-    if len(password_bytes) > 72:
-        password = password_bytes[:72].decode('utf-8', errors='ignore')
-    return pwd_context.hash(password)
 
+    # Ограничиваем длину строки так, чтобы UTF-8 занимал максимум 72 байта
+    encoded = password.encode("utf-8")
+    if len(encoded) > 72:
+        # Обрезаем байты и декодируем неполные символы безопасно
+        encoded = encoded[:72]
+        password = encoded.decode("utf-8", errors="ignore")
+
+    return pwd_context.hash(password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Создать access токен.

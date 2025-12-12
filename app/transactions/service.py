@@ -24,53 +24,24 @@ class TransactionService:
 
     def _convert_db_transaction_to_model(self, db_transaction) -> Transaction:
         """Преобразовать транзакцию из БД в модель API."""
-        # Преобразуем тип транзакции из enum БД в enum модели
-        type_value = None
+        # Преобразуем тип транзакции из enum БД в enum модели API
+        # SQLAlchemy с values_callable возвращает либо строку "income"/"expense", либо enum объект
+        if isinstance(db_transaction.type, str):
+            type_value = db_transaction.type
+        elif isinstance(db_transaction.type, DBTransactionType):
+            type_value = db_transaction.type.value
+        else:
+            # Для других случаев (например, если это другой enum-подобный объект)
+            type_value = getattr(db_transaction.type, 'value', str(db_transaction.type))
         
-        # Пробуем разные способы получения значения типа транзакции
+        # Значения уже в lowercase ("income", "expense"), преобразуем в enum модели API
         try:
-            if isinstance(db_transaction.type, str):
-                # Это уже строка
-                type_value = db_transaction.type
-            elif isinstance(db_transaction.type, DBTransactionType):
-                # Это enum из БД, берем его значение
-                type_value = db_transaction.type.value
-            elif hasattr(db_transaction.type, 'value'):
-                # Это enum, пробуем получить value
-                type_value = db_transaction.type.value
-            elif hasattr(db_transaction.type, 'name'):
-                # Это enum, пробуем через name и преобразуем в значение
-                name = db_transaction.type.name
-                if name == "INCOME":
-                    type_value = "income"
-                elif name == "EXPENSE":
-                    type_value = "expense"
-                else:
-                    type_value = name.lower()
-            else:
-                # Пытаемся преобразовать в строку
-                type_value = str(db_transaction.type)
-        except Exception as e:
-            # Если ничего не сработало, пробуем получить строковое представление
-            type_value = str(db_transaction.type)
-
-        # Нормализуем значение: приводим к lowercase для совместимости
-        if isinstance(type_value, str):
-            type_value_lower = type_value.lower()
-        else:
-            type_value_lower = str(type_value).lower()
-        
-        # Преобразуем в enum модели API (значения там lowercase: "income", "expense")
-        if type_value_lower == "income":
-            trans_type = TransactionType.INCOME
-        elif type_value_lower == "expense":
-            trans_type = TransactionType.EXPENSE
-        else:
-            # Если ничего не подошло, пробуем создать напрямую
-            try:
-                trans_type = TransactionType(type_value_lower)
-            except ValueError:
-                raise ValueError(f"Unknown transaction type: {type_value} (normalized: {type_value_lower}). Transaction ID: {db_transaction.id}")
+            trans_type = TransactionType(type_value.lower())
+        except ValueError:
+            raise ValueError(
+                f"Unknown transaction type: {type_value}. "
+                f"Transaction ID: {db_transaction.id}"
+            )
         
         trans_category = TransactionCategory(db_transaction.category)
 
