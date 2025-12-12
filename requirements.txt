@@ -6,6 +6,8 @@ sqlalchemy
 psycopg2-binary
 python-dotenv
 pytest
+pytest-asyncio
+pytest-cov
 alembic
 python-jose[cryptography]
 bcrypt==4.1.2

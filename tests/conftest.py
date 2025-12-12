@@ -60,10 +60,8 @@ def _get_test_db_engine():
     if _test_db_engine is None:
         from sqlalchemy import String, Enum as SQLEnum
         
-        # Создаем in-memory SQLite базу
         _test_db_engine = create_engine("sqlite:///:memory:", echo=False)
         
-        # Временно заменяем Enum колонки на String для SQLite
         original_columns = {}
         for table in Base.metadata.tables.values():
             for column in table.columns:
@@ -71,10 +69,8 @@ def _get_test_db_engine():
                     original_columns[(table.name, column.name)] = column.type
                     column.type = String(20)
         
-        # Создаем все таблицы
         Base.metadata.create_all(bind=_test_db_engine)
         
-        # Восстанавливаем оригинальные типы (для будущих использований)
         for (table_name, col_name), orig_type in original_columns.items():
             table = Base.metadata.tables[table_name]
             table.columns[col_name].type = orig_type
@@ -85,10 +81,9 @@ def _get_test_db_engine():
 @pytest.fixture(scope="function", autouse=True)
 def setup_test_db_for_repositories(monkeypatch, request):
     """Автоматически настраивает тестовую БД для тестов репозиториев."""
-    # Проверяем, является ли тест тестом репозитория
     test_file = str(request.node.fspath).replace('\\', '/')
     
-    if 'test_transaction_repository' in test_file or 'test_user_repository' in test_file:
+    if any(x in test_file for x in ['test_transaction_repository', 'test_user_repository', 'test_group_repository', 'test_base_repository']):
         test_engine = _get_test_db_engine()
         TestSessionLocal = sessionmaker(bind=test_engine, autocommit=False, autoflush=False)
         
@@ -97,7 +92,8 @@ def setup_test_db_for_repositories(monkeypatch, request):
         monkeypatch.setattr(db_session, "engine", test_engine)
         
         # Также нужно обновить импорты в репозиториях
-        from app.repositories import transaction_repository, user_repository
+        from app.repositories import transaction_repository, user_repository, group_repository
         monkeypatch.setattr(transaction_repository, "SessionLocal", TestSessionLocal)
         monkeypatch.setattr(user_repository, "SessionLocal", TestSessionLocal)
+        monkeypatch.setattr(group_repository, "SessionLocal", TestSessionLocal)
 

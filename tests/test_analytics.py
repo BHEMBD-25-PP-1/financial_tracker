@@ -11,7 +11,7 @@ from app.core.dependencies import get_current_user, get_db
 @pytest.fixture
 def mock_db_user():
     """Мок пользователя из базы данных."""
-    user = MagicMock(spec=DBUser)
+    user = MagicMock(unsafe_spec=DBUser)
     user.id = 1
     return user
 
@@ -25,7 +25,7 @@ def client_with_auth(mock_db_user):
     yield client
     app.dependency_overrides.clear()
 
-# Мокаем транзакции
+
 mock_transactions = [
     Transaction(
         id=1,
@@ -85,12 +85,10 @@ def test_get_by_category(mock_repo, client_with_auth):
     data = response.json()
     categories = {c["category"]: c for c in data["categories"]}
 
-    # Проверяем сумму и количество по категории "Job"
     assert categories["Job"]["total_amount"] == 300.0
     assert categories["Job"]["transaction_count"] == 2
     assert categories["Job"]["transaction_type"] == "INCOME"
 
-    # Проверяем сумму и количество по категории "Food"
     assert categories["Food"]["total_amount"] == 50.0
     assert categories["Food"]["transaction_count"] == 1
     assert categories["Food"]["transaction_type"] == "EXPENSE"
@@ -112,7 +110,6 @@ def test_get_by_period(mock_repo, client_with_auth):
     assert data["period_type"] == "MONTH"
     assert len(data["periods"]) > 0
 
-    # Проверяем суммарный доход и расход за период
     total_income = sum(p["total_income"] for p in data["periods"])
     total_expense = sum(p["total_expense"] for p in data["periods"])
 
@@ -126,14 +123,11 @@ def test_get_trends(mock_repo, client_with_auth):
 
     data = response.json()
 
-    # Проверяем, что доход и расход посчитаны
     assert data["income_trend"]["average_daily"] > 0
     assert data["expense_trend"]["average_daily"] > 0
 
-    # Проверяем направление трендов (только для корректности структуры)
     assert data["income_trend"]["direction"] in ["UP", "DOWN", "STABLE"]
     assert data["expense_trend"]["direction"] in ["UP", "DOWN", "STABLE"]
 
-    # Проверяем период
     assert data["period"]["start_date"] == "2025-01-01"
     assert data["period"]["end_date"] == "2025-01-31"

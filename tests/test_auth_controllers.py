@@ -14,7 +14,7 @@ from app.db.models import User as DBUser
 @pytest.fixture
 def mock_db_user():
     """Мок пользователя из базы данных."""
-    user = MagicMock(spec=DBUser)
+    user = MagicMock(unsafe_spec=DBUser)
     user.id = 1
     user.first_name = "Иван"
     user.last_name = "Иванов"

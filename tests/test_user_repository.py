@@ -135,3 +135,104 @@ def test_add_user_with_invalid_name_raises_error(repo):
     with pytest.raises(ValueError, match="too long"):
         repo.add(first_name="A" * 101, last_name="Smith", login="alice", password="password123")
 
+
+def test_get_by_login_success(repo):
+    """Тест получения пользователя по логину."""
+    created = repo.add(first_name="Alice", last_name="Smith", login="alice", password="password123")
+    
+    fetched = repo.get_by_login("alice")
+    
+    assert fetched is not None
+    assert fetched.id == created.id
+    assert fetched.login == "alice"
+
+
+def test_get_by_login_case_insensitive(repo):
+    """Тест получения пользователя по логину (регистронезависимо)."""
+    created = repo.add(first_name="Alice", last_name="Smith", login="alice", password="password123")
+    
+    fetched = repo.get_by_login("ALICE")
+    
+    assert fetched is not None
+    assert fetched.id == created.id
+
+
+def test_get_by_login_not_found(repo):
+    """Тест получения несуществующего пользователя по логину."""
+    user = repo.get_by_login("nonexistent")
+    assert user is None
+
+
+def test_get_by_login_with_whitespace(repo):
+    """Тест получения пользователя по логину с пробелами."""
+    created = repo.add(first_name="Alice", last_name="Smith", login="alice", password="password123")
+    
+    fetched = repo.get_by_login("  alice  ")
+    
+    assert fetched is not None
+    assert fetched.id == created.id
+
+
+def test_verify_user_success(repo):
+    """Тест успешной верификации пользователя."""
+    repo.add(first_name="Alice", last_name="Smith", login="alice", password="password123")
+    
+    user = repo.verify_user("alice", "password123")
+    
+    assert user is not None
+    assert user.login == "alice"
+
+
+def test_verify_user_wrong_password(repo):
+    """Тест верификации с неверным паролем."""
+    repo.add(first_name="Alice", last_name="Smith", login="alice", password="password123")
+    
+    user = repo.verify_user("alice", "wrongpassword")
+    
+    assert user is None
+
+
+def test_verify_user_not_found(repo):
+    """Тест верификации несуществующего пользователя."""
+    user = repo.verify_user("nonexistent", "password123")
+    
+    assert user is None
+
+
+def test_update_password_success(repo):
+    """Тест успешного обновления пароля."""
+    created = repo.add(first_name="Alice", last_name="Smith", login="alice", password="password123")
+    
+    result = repo.update_password(created.id, "newpassword123")
+    
+    assert result is True
+    
+    user = repo.verify_user("alice", "newpassword123")
+    assert user is not None
+    
+    user = repo.verify_user("alice", "password123")
+    assert user is None
+
+
+def test_update_password_user_not_found(repo):
+    """Тест обновления пароля несуществующего пользователя."""
+    result = repo.update_password(99999, "newpassword123")
+    
+    assert result is False
+
+
+def test_update_password_short_password(repo):
+    """Тест обновления пароля с коротким паролем."""
+    created = repo.add(first_name="Alice", last_name="Smith", login="alice", password="password123")
+    
+    with pytest.raises(ValueError, match="Password must be at least 8 characters"):
+        repo.update_password(created.id, "short")
+
+
+def test_update_password_empty_password(repo):
+    """Тест обновления пароля с пустым паролем."""
+    created = repo.add(first_name="Alice", last_name="Smith", login="alice", password="password123")
+    
+    with pytest.raises(ValueError, match="Password must be at least 8 characters"):
+        repo.update_password(created.id, "")
+

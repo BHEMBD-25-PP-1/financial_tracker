@@ -33,7 +33,7 @@ def service(mock_db_session, mock_repository):
 @pytest.fixture
 def db_transaction():
     """Мок транзакции из БД."""
-    transaction = MagicMock(spec=DBTransaction)
+    transaction = MagicMock(unsafe_spec=DBTransaction)
     transaction.id = 1
     transaction.name = "Покупка продуктов"
     transaction.type = DBTransactionType.EXPENSE
@@ -143,7 +143,7 @@ def test_get_transaction_by_id_not_found(service, mock_repository):
 
 def test_update_transaction_success(service, mock_repository, db_transaction):
     """Тест успешного обновления транзакции."""
-    updated_db_transaction = MagicMock(spec=DBTransaction)
+    updated_db_transaction = MagicMock(unsafe_spec=DBTransaction)
     updated_db_transaction.id = 1
     updated_db_transaction.name = "Обновленная покупка"
     updated_db_transaction.type = DBTransactionType.EXPENSE

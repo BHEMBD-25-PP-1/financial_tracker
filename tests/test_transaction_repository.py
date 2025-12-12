@@ -51,7 +51,6 @@ def test_user():
     
     session = db_session.SessionLocal()
     try:
-        # Проверяем, существует ли пользователь
         existing_user = session.query(User).filter(User.login == "test_user").first()
         if existing_user:
             yield existing_user
@@ -120,7 +119,6 @@ def test_create_transaction_success(repo, test_user):
     assert transaction.amount == 1000.0
     assert transaction.user_id == test_user.id
 
-    # Проверяем, что транзакция сохранена в БД
     session = db_session.SessionLocal()
     try:
         db_transaction = session.query(Transaction).filter_by(id=transaction.id).one()
@@ -247,7 +245,6 @@ def test_get_by_id_not_found(repo, test_user):
 
 def test_get_by_id_wrong_user(repo, test_user):
     """Тест получения транзакции другого пользователя."""
-    # Создаем транзакцию
     created = repo.create(
         name="Покупка",
         type=TransactionType.EXPENSE,
@@ -332,7 +329,6 @@ def test_get_all_with_filters(repo, test_user):
 
 def test_get_all_with_pagination(repo, test_user):
     """Тест пагинации при получении транзакций."""
-    # Создаем несколько транзакций
     for i in range(5):
         repo.create(
             name=f"Покупка {i}",
@@ -459,7 +455,6 @@ def test_delete_transaction_success(repo, test_user):
 
     assert deleted is True
 
-    # Проверяем, что транзакция удалена
     session = db_session.SessionLocal()
     try:
         db_transaction = session.query(Transaction).filter_by(id=created.id).first()
