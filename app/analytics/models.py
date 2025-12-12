@@ -7,7 +7,7 @@ from datetime import date
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class TransactionType(str, Enum):
@@ -50,10 +50,8 @@ class SummaryResponse(BaseModel):
     transaction_count: int
     period: Optional[PeriodInfo] = None
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "total_income": 100000.00,
                 "total_expense": 75000.00,
@@ -61,6 +59,7 @@ class SummaryResponse(BaseModel):
                 "transaction_count": 150,
             }
         }
+    )
 
 
 class CategoryStatistic(BaseModel):
@@ -72,10 +71,8 @@ class CategoryStatistic(BaseModel):
     percentage: Optional[float] = None
     transaction_type: Optional[TransactionType] = None
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "category": "Еда",
                 "total_amount": 25000.00,
@@ -84,6 +81,7 @@ class CategoryStatistic(BaseModel):
                 "transaction_type": "expense",
             }
         }
+    )
 
 
 class CategoryAnalyticsResponse(BaseModel):
@@ -92,14 +90,13 @@ class CategoryAnalyticsResponse(BaseModel):
     categories: List[CategoryStatistic]
     period: Optional[PeriodInfo] = None
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "categories": [],
             }
         }
+    )
 
 
 class PeriodStatistic(BaseModel):
@@ -113,10 +110,8 @@ class PeriodStatistic(BaseModel):
     balance: float
     transaction_count: int
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "period": "2024-01",
                 "start_date": "2024-01-01",
@@ -127,6 +122,7 @@ class PeriodStatistic(BaseModel):
                 "transaction_count": 75,
             }
         }
+    )
 
 
 class PeriodAnalyticsResponse(BaseModel):
@@ -135,15 +131,14 @@ class PeriodAnalyticsResponse(BaseModel):
     periods: List[PeriodStatistic]
     period_type: PeriodType
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "periods": [],
                 "period_type": "month",
             }
         }
+    )
 
 
 class TrendInfo(BaseModel):
@@ -153,16 +148,15 @@ class TrendInfo(BaseModel):
     change_percentage: float
     average_daily: float
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "direction": "up",
                 "change_percentage": 15.5,
                 "average_daily": 3333.33,
             }
         }
+    )
 
 
 class TrendsResponse(BaseModel):
@@ -172,10 +166,8 @@ class TrendsResponse(BaseModel):
     expense_trend: TrendInfo
     period: Optional[PeriodInfo] = None
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "income_trend": {
                     "direction": "up",
@@ -189,6 +181,7 @@ class TrendsResponse(BaseModel):
                 },
             }
         }
+    )
 
 
 class Error(BaseModel):
@@ -197,13 +190,11 @@ class Error(BaseModel):
     detail: str
     error_code: Optional[str] = None
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "detail": "Описание ошибки",
                 "error_code": "VALIDATION_ERROR",
             }
         }
-
+    )

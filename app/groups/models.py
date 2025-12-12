@@ -7,7 +7,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class GroupRole(str, Enum):
@@ -26,10 +26,8 @@ class Group(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "Семья Ивановых",
@@ -38,36 +36,35 @@ class Group(BaseModel):
                 "updated_at": "2024-01-15T10:30:00Z",
             }
         }
+    )
 
 
 class CreateGroupRequest(BaseModel):
     """Запрос на создание группы."""
 
-    name: str = Field(..., min_length=1, max_length=200, example="Семья Ивановых")
+    name: str = Field(..., min_length=1, max_length=200, examples=["Семья Ивановых"])
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Семья Ивановых",
             }
         }
+    )
 
 
 class UpdateGroupRequest(BaseModel):
     """Запрос на обновление группы."""
 
-    name: str = Field(..., min_length=1, max_length=200, example="Семья Ивановых")
+    name: str = Field(..., min_length=1, max_length=200, examples=["Семья Ивановых"])
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Семья Ивановых",
             }
         }
+    )
 
 
 class GroupListResponse(BaseModel):
@@ -78,10 +75,8 @@ class GroupListResponse(BaseModel):
     page: int
     size: int
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "items": [],
                 "total": 0,
@@ -89,6 +84,7 @@ class GroupListResponse(BaseModel):
                 "size": 20,
             }
         }
+    )
 
 
 class UserInfo(BaseModel):
@@ -110,10 +106,8 @@ class GroupMember(BaseModel):
     joined_at: datetime
     user: Optional[UserInfo] = None
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "user_id": 2,
@@ -122,6 +116,7 @@ class GroupMember(BaseModel):
                 "joined_at": "2024-01-15T10:30:00Z",
             }
         }
+    )
 
 
 class GroupMembersResponse(BaseModel):
@@ -129,29 +124,27 @@ class GroupMembersResponse(BaseModel):
 
     members: List[GroupMember]
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "members": [],
             }
         }
+    )
 
 
 class AddMemberRequest(BaseModel):
     """Запрос на добавление участника в группу."""
 
-    user_id: int = Field(..., example=2)
+    user_id: int = Field(..., examples=[2])
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "user_id": 2,
             }
         }
+    )
 
 
 class CategoryStatistic(BaseModel):
@@ -179,10 +172,8 @@ class GroupAnalyticsResponse(BaseModel):
     statistics: List[CategoryStatistic]
     period: Optional[PeriodInfo] = None
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "group_id": 1,
                 "total_income": 50000.00,
@@ -191,6 +182,7 @@ class GroupAnalyticsResponse(BaseModel):
                 "statistics": [],
             }
         }
+    )
 
 
 class Error(BaseModel):
@@ -199,13 +191,11 @@ class Error(BaseModel):
     detail: str
     error_code: Optional[str] = None
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "detail": "Описание ошибки",
                 "error_code": "VALIDATION_ERROR",
             }
         }
-
+    )
