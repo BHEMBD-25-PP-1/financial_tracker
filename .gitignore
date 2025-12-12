@@ -34,6 +34,15 @@ generated/
 # Logs
 logs/
 *.log
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
 # Scripts for test data seeding
 scripts/
 
