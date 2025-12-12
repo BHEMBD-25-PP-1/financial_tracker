@@ -22,7 +22,7 @@ def test_period_type_enum_invalid():
 
 
 def test_trends_response_nested():
-    trend = m.TrendInfo(direction="up", change_percentage=10.0, average_daily=5.0)
+    trend = m.TrendInfo(direction="UP", change_percentage=10.0, average_daily=5.0)
     resp = m.TrendsResponse(income_trend=trend, expense_trend=trend)
     assert resp.income_trend.direction == m.TrendDirection.UP
 

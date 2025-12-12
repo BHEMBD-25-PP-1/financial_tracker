@@ -13,8 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field
 class TransactionType(str, Enum):
     """Тип транзакции."""
 
-    INCOME = "income"
-    EXPENSE = "expense"
+    INCOME = "INCOME"
+    EXPENSE = "EXPENSE"
 
 
 class TransactionCategory(str, Enum):
@@ -57,7 +57,7 @@ class Transaction(BaseModel):
             "example": {
                 "id": 1,
                 "name": "Покупка продуктов",
-                "type": "expense",
+                "type": "EXPENSE",
                 "category": "Еда",
                 "amount": 1500.50,
                 "date": "2024-01-15",
@@ -84,7 +84,7 @@ class CreateTransactionRequest(BaseModel):
         json_schema_extra={
             "example": {
                 "name": "Покупка продуктов",
-                "type": "expense",
+                "type": "EXPENSE",
                 "category": "Еда",
                 "amount": 1500.50,
                 "date": "2024-01-15",
@@ -108,7 +108,7 @@ class UpdateTransactionRequest(BaseModel):
         json_schema_extra={
             "example": {
                 "name": "Покупка продуктов",
-                "type": "expense",
+                "type": "EXPENSE",
                 "category": "Еда",
                 "amount": 1500.50,
                 "date": "2024-01-15",

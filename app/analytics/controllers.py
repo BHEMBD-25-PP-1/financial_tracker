@@ -3,7 +3,7 @@
 Автоматически сгенерировано из openapi-specs/analytics-service.yaml
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -71,8 +71,8 @@ async def get_summary(
         group_id=group_id
     )
     
-    total_income = sum(t.amount for t in transactions if t.type.value == "income")
-    total_expense = sum(t.amount for t in transactions if t.type.value == "expense")
+    total_income = sum(t.amount for t in transactions if t.type.value.upper() == "INCOME")
+    total_expense = sum(t.amount for t in transactions if t.type.value.upper() == "EXPENSE")
     balance = total_income - total_expense
     transaction_count = len(transactions)
     
@@ -135,7 +135,6 @@ async def get_by_category(
         transaction_type=transaction_type
     )
     
-    # Группируем по категориям
     category_stats = {}
     for t in transactions:
         if t.category not in category_stats:
@@ -143,7 +142,6 @@ async def get_by_category(
         category_stats[t.category]["total"] += t.amount
         category_stats[t.category]["count"] += 1
     
-    # Вычисляем проценты
     total_amount = sum(stats["total"] for stats in category_stats.values())
     
     categories = [
@@ -152,7 +150,7 @@ async def get_by_category(
             total_amount=stats["total"],
             transaction_count=stats["count"],
             percentage=(stats["total"] / total_amount * 100) if total_amount > 0 else 0.0,
-            transaction_type=TransactionType(stats["type"])
+            transaction_type=TransactionType(stats["type"].upper())
         )
         for cat, stats in category_stats.items()
     ]
@@ -214,17 +212,14 @@ async def get_by_period(
         group_id=group_id
     )
     
-    # Группируем по периодам
     period_stats = {}
     
     for t in transactions:
-        # Определяем период для транзакции
         if period_type == PeriodType.DAY:
             period_key = t.date.strftime("%Y-%m-%d")
             period_start = t.date
             period_end = t.date
         elif period_type == PeriodType.WEEK:
-            # Находим начало недели (понедельник)
             days_since_monday = t.date.weekday()
             period_start = t.date - timedelta(days=days_since_monday)
             period_end = period_start + timedelta(days=6)
@@ -232,7 +227,6 @@ async def get_by_period(
         elif period_type == PeriodType.MONTH:
             period_key = t.date.strftime("%Y-%m")
             period_start = date(t.date.year, t.date.month, 1)
-            # Последний день месяца
             if t.date.month == 12:
                 period_end = date(t.date.year + 1, 1, 1) - timedelta(days=1)
             else:
@@ -251,7 +245,7 @@ async def get_by_period(
                 "count": 0
             }
         
-        if t.type.value == "income":
+        if t.type.value.upper() == "INCOME":
             period_stats[period_key]["income"] += t.amount
         else:
             period_stats[period_key]["expense"] += t.amount
@@ -310,7 +304,6 @@ async def get_trends(
     
     repo = TransactionRepository(db)
     
-    # Получаем транзакции за текущий период
     current_transactions, _ = repo.get_all(
         user_id=current_user.id,
         skip=0,
@@ -320,10 +313,7 @@ async def get_trends(
         group_id=group_id
     )
     
-    # Вычисляем длительность периода для сравнения
     period_days = (end_date - start_date).days + 1
-    
-    # Вычисляем средний период для сравнения (берем предыдущий период такой же длины)
     prev_start = start_date - timedelta(days=period_days)
     prev_end = start_date - timedelta(days=1)
     
@@ -336,9 +326,8 @@ async def get_trends(
         group_id=group_id
     )
     
-    # Доходы
-    current_income = sum(t.amount for t in current_transactions if t.type.value == "income")
-    prev_income = sum(t.amount for t in prev_transactions if t.type.value == "income")
+    current_income = sum(t.amount for t in current_transactions if t.type.value.upper() == "INCOME")
+    prev_income = sum(t.amount for t in prev_transactions if t.type.value.upper() == "INCOME")
     
     income_change = 0.0
     if prev_income > 0:
@@ -352,9 +341,8 @@ async def get_trends(
     elif income_change < -5:
         income_direction = TrendDirection.DOWN
     
-    # Расходы
-    current_expense = sum(t.amount for t in current_transactions if t.type.value == "expense")
-    prev_expense = sum(t.amount for t in prev_transactions if t.type.value == "expense")
+    current_expense = sum(t.amount for t in current_transactions if t.type.value.upper() == "EXPENSE")
+    prev_expense = sum(t.amount for t in prev_transactions if t.type.value.upper() == "EXPENSE")
     
     expense_change = 0.0
     if prev_expense > 0:

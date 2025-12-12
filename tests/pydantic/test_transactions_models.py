@@ -10,7 +10,7 @@ def test_transaction_valid_example():
     data = {
         "id": 1,
         "name": "Покупка",
-        "type": "expense",
+        "type": "EXPENSE",
         "category": "Еда",
         "amount": 100.5,
         "date": datetime.date(2024, 1, 1),
@@ -45,7 +45,7 @@ def test_transaction_list_response_types():
     tx = m.Transaction(
         id=1,
         name="A",
-        type="income",
+        type="INCOME",
         category="Категория",
         amount=1.0,
         date=datetime.date.today(),

@@ -10,38 +10,32 @@ PROJECT_ROOT = Path(__file__).resolve().parents[0]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.db.session import SessionLocal, engine
+from app.db import session as db_session
 from app.db.base import Base
 from app.db.models import User
 from app.repositories.user_repository import UserRepository
 
 
-def _clean_users_table():
-    """Вспомогательная функция для очистки таблицы пользователей."""
-    session = SessionLocal()
+@pytest.fixture(autouse=True)
+def clean_users_table():
+    """Очистка таблицы пользователей перед и после каждого теста."""
+    session = db_session.SessionLocal()
     try:
         session.query(User).delete()
         session.commit()
     except Exception:
         session.rollback()
-        raise
     finally:
         session.close()
-
-
-@pytest.fixture(scope="module", autouse=True)
-def ensure_tables():
-    """Создание таблиц перед всеми тестами."""
-    Base.metadata.create_all(bind=engine)
     yield
-
-
-@pytest.fixture(autouse=True)
-def clean_users_table():
-    """Очистка таблицы пользователей перед и после каждого теста."""
-    _clean_users_table()
-    yield
-    _clean_users_table()
+    session = db_session.SessionLocal()
+    try:
+        session.query(User).delete()
+        session.commit()
+    except Exception:
+        session.rollback()
+    finally:
+        session.close()
 
 
 @pytest.fixture
@@ -53,51 +47,54 @@ def repo():
 
 def test_add_user_persists_record(repo):
     """Тест создания пользователя и сохранения в БД."""
-    user = repo.add(name="Alice", email="alice@example.com")
+    user = repo.add(first_name="Alice", last_name="Smith", login="alice", password="password123")
 
     assert user.id is not None
-    assert user.name == "Alice"
-    assert user.email == "alice@example.com"
+    assert user.first_name == "Alice"
+    assert user.last_name == "Smith"
+    assert user.login == "alice"
 
-    session = SessionLocal()
+    session = db_session.SessionLocal()
     try:
         db_user = session.query(User).filter_by(id=user.id).one()
-        assert db_user.name == "Alice"
-        assert db_user.email == "alice@example.com"
+        assert db_user.first_name == "Alice"
+        assert db_user.last_name == "Smith"
+        assert db_user.login == "alice"
     finally:
         session.close()
 
 
 def test_get_by_id_returns_existing_user(repo):
     """Тест получения пользователя по ID."""
-    created = repo.add(name="Bob", email="bob@example.com")
+    created = repo.add(first_name="Bob", last_name="Jones", login="bob", password="password123")
 
     fetched = repo.get_by_id(created.id)
 
     assert fetched is not None
     assert fetched.id == created.id
-    assert fetched.name == "Bob"
-    assert fetched.email == "bob@example.com"
+    assert fetched.first_name == "Bob"
+    assert fetched.last_name == "Jones"
+    assert fetched.login == "bob"
 
 
 def test_get_all_returns_all_users(repo):
     """Тест получения всех пользователей."""
-    repo.add(name="Carol", email="carol@example.com")
-    repo.add(name="Dave", email="dave@example.com")
+    repo.add(first_name="Carol", last_name="White", login="carol", password="password123")
+    repo.add(first_name="Dave", last_name="Black", login="dave", password="password123")
 
     users = repo.get_all()
 
     assert len(users) == 2
-    emails = sorted(user.email for user in users)
-    assert emails == ["carol@example.com", "dave@example.com"]
+    logins = sorted(user.login for user in users)
+    assert logins == ["carol", "dave"]
 
 
-def test_add_duplicate_email_raises_error(repo):
-    """Тест создания пользователя с дублирующимся email."""
-    repo.add(name="Alice", email="alice@example.com")
+def test_add_duplicate_login_raises_error(repo):
+    """Тест создания пользователя с дублирующимся login."""
+    repo.add(first_name="Alice", last_name="Smith", login="alice", password="password123")
     
     with pytest.raises(ValueError, match="already exists"):
-        repo.add(name="Bob", email="alice@example.com")
+        repo.add(first_name="Bob", last_name="Jones", login="alice", password="password123")
 
 
 def test_get_by_id_returns_none_for_nonexistent_user(repo):
@@ -115,23 +112,26 @@ def test_get_all_returns_empty_list(repo):
     assert len(users) == 0
 
 
-def test_add_user_with_invalid_email_raises_error(repo):
-    """Тест валидации email при создании пользователя."""
-    with pytest.raises(ValueError, match="Invalid email format"):
-        repo.add(name="Alice", email="invalid-email")
+def test_add_user_with_invalid_login_raises_error(repo):
+    """Тест валидации login при создании пользователя."""
+    with pytest.raises(ValueError, match="Login cannot be empty"):
+        repo.add(first_name="Alice", last_name="Smith", login="", password="password123")
     
-    with pytest.raises(ValueError, match="Email cannot be empty"):
-        repo.add(name="Alice", email="")
+    with pytest.raises(ValueError, match="Login too short"):
+        repo.add(first_name="Alice", last_name="Smith", login="ab", password="password123")
+    
+    with pytest.raises(ValueError, match="can only contain letters"):
+        repo.add(first_name="Alice", last_name="Smith", login="alice-smith", password="password123")
 
 
 def test_add_user_with_invalid_name_raises_error(repo):
     """Тест валидации имени при создании пользователя."""
-    with pytest.raises(ValueError, match="Name cannot be empty"):
-        repo.add(name="", email="alice@example.com")
+    with pytest.raises(ValueError, match="cannot be empty"):
+        repo.add(first_name="", last_name="Smith", login="alice", password="password123")
     
-    with pytest.raises(ValueError, match="Name cannot be empty"):
-        repo.add(name="   ", email="alice@example.com")
+    with pytest.raises(ValueError, match="cannot be empty"):
+        repo.add(first_name="   ", last_name="Smith", login="alice", password="password123")
     
-    with pytest.raises(ValueError, match="Name too long"):
-        repo.add(name="A" * 101, email="alice@example.com")
+    with pytest.raises(ValueError, match="too long"):
+        repo.add(first_name="A" * 101, last_name="Smith", login="alice", password="password123")
 

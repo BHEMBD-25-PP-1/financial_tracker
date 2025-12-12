@@ -28,10 +28,10 @@ def test_group_member_role_enum():
         id=1,
         user_id=1,
         group_id=1,
-        role="owner",
+        role="OWNER",
         joined_at=datetime.datetime.utcnow(),
     )
-    assert member.role == m.GroupRole.owner
+    assert member.role == m.GroupRole.OWNER
 
 
 def test_group_member_invalid_role():

@@ -2,10 +2,12 @@ import logging
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy.orm import Session
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.repositories.user_repository import UserRepository
 from app.db import session as db_session
+from app.db.base import Base
 
 
 @pytest.fixture
@@ -47,4 +49,55 @@ def logger_mock(monkeypatch) -> MagicMock:
     logger = MagicMock(spec=logging.Logger)
     monkeypatch.setattr(logging, "getLogger", MagicMock(return_value=logger))
     return logger
+
+
+_test_db_engine = None
+
+
+def _get_test_db_engine():
+    """Создает или возвращает существующий тестовый engine."""
+    global _test_db_engine
+    if _test_db_engine is None:
+        from sqlalchemy import String, Enum as SQLEnum
+        
+        # Создаем in-memory SQLite базу
+        _test_db_engine = create_engine("sqlite:///:memory:", echo=False)
+        
+        # Временно заменяем Enum колонки на String для SQLite
+        original_columns = {}
+        for table in Base.metadata.tables.values():
+            for column in table.columns:
+                if isinstance(column.type, SQLEnum):
+                    original_columns[(table.name, column.name)] = column.type
+                    column.type = String(20)
+        
+        # Создаем все таблицы
+        Base.metadata.create_all(bind=_test_db_engine)
+        
+        # Восстанавливаем оригинальные типы (для будущих использований)
+        for (table_name, col_name), orig_type in original_columns.items():
+            table = Base.metadata.tables[table_name]
+            table.columns[col_name].type = orig_type
+    
+    return _test_db_engine
+
+
+@pytest.fixture(scope="function", autouse=True)
+def setup_test_db_for_repositories(monkeypatch, request):
+    """Автоматически настраивает тестовую БД для тестов репозиториев."""
+    # Проверяем, является ли тест тестом репозитория
+    test_file = str(request.node.fspath).replace('\\', '/')
+    
+    if 'test_transaction_repository' in test_file or 'test_user_repository' in test_file:
+        test_engine = _get_test_db_engine()
+        TestSessionLocal = sessionmaker(bind=test_engine, autocommit=False, autoflush=False)
+        
+        # Заменяем SessionLocal во всех нужных местах
+        monkeypatch.setattr(db_session, "SessionLocal", TestSessionLocal)
+        monkeypatch.setattr(db_session, "engine", test_engine)
+        
+        # Также нужно обновить импорты в репозиториях
+        from app.repositories import transaction_repository, user_repository
+        monkeypatch.setattr(transaction_repository, "SessionLocal", TestSessionLocal)
+        monkeypatch.setattr(user_repository, "SessionLocal", TestSessionLocal)
 

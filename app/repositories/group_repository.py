@@ -68,7 +68,6 @@ class GroupRepository(BaseRepository[Group]):
 
         try:
             with self._transaction():
-                # Проверяем существование пользователя
                 user = self.db.query(User).filter(User.id == owner_id).first()
                 if not user:
                     raise ValueError(f"User with ID {owner_id} not found")
@@ -81,7 +80,7 @@ class GroupRepository(BaseRepository[Group]):
                 user_group = UserGroup(
                     group_id=group.id,
                     user_id=owner_id,
-                    role=GroupRole.owner
+                    role=GroupRole.OWNER
                 )
                 self.db.add(user_group)
                 self.db.flush()
@@ -158,7 +157,6 @@ class GroupRepository(BaseRepository[Group]):
                 if not group:
                     return None
 
-                # Проверяем права владельца
                 if group.owner_id != owner_id:
                     self.logger.warning(f"Access denied: user {owner_id} is not owner of group {group_id}")
                     return None
@@ -198,15 +196,11 @@ class GroupRepository(BaseRepository[Group]):
                 if not group:
                     return False
 
-                # Проверяем права владельца
                 if group.owner_id != owner_id:
                     self.logger.warning(f"Access denied: user {owner_id} is not owner of group {group_id}")
                     return False
 
-                # Удаляем все связи пользователей с группой
                 self.db.query(UserGroup).filter(UserGroup.group_id == group_id).delete()
-
-                # Удаляем группу
                 self.db.delete(group)
                 self.db.flush()
                 self.logger.info(f"Group deleted successfully: id={group_id}")
@@ -238,7 +232,7 @@ class GroupRepository(BaseRepository[Group]):
             self.logger.error(f"Database error while fetching members: {e}")
             raise RuntimeError(f"Database error: {e}") from e
 
-    def add_member(self, group_id: int, user_id: int, owner_id: int, role: GroupRole = GroupRole.member) -> UserGroup:
+    def add_member(self, group_id: int, user_id: int, owner_id: int, role: GroupRole = GroupRole.MEMBER) -> UserGroup:
         """Добавить участника в группу.
 
         Args:
@@ -254,19 +248,16 @@ class GroupRepository(BaseRepository[Group]):
 
         try:
             with self._transaction():
-                # Проверяем права владельца
                 group = self.db.query(Group).filter(Group.id == group_id).first()
                 if not group:
                     raise ValueError(f"Group with ID {group_id} not found")
                 if group.owner_id != owner_id:
                     raise ValueError("Only group owner can add members")
 
-                # Проверяем существование пользователя
                 user = self.db.query(User).filter(User.id == user_id).first()
                 if not user:
                     raise ValueError(f"User with ID {user_id} not found")
 
-                # Проверяем, не является ли пользователь уже участником
                 existing = (
                     self.db.query(UserGroup)
                     .filter(UserGroup.group_id == group_id, UserGroup.user_id == user_id)
@@ -306,7 +297,6 @@ class GroupRepository(BaseRepository[Group]):
                 if not group:
                     return False
 
-                # Проверяем права: владелец может удалить любого, участник может удалить себя
                 if group.owner_id != requester_id and user_id != requester_id:
                     raise ValueError("Only group owner can remove other members")
 
@@ -318,8 +308,7 @@ class GroupRepository(BaseRepository[Group]):
                 if not user_group:
                     return False
 
-                # Нельзя удалить владельца группы
-                if user_group.role == GroupRole.owner:
+                if user_group.role.value.upper() == GroupRole.OWNER.value:
                     raise ValueError("Cannot remove group owner")
 
                 self.db.delete(user_group)

@@ -77,7 +77,7 @@ async def register_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
-    except RuntimeError as e:
+    except RuntimeError:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка базы данных при регистрации пользователя"
@@ -137,10 +137,6 @@ async def login_user(
     except HTTPException:
         raise
     except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"Error in login: {e}")
-        print(error_details)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка при авторизации: {str(e)}"
@@ -232,7 +228,6 @@ async def refresh_token(
             detail="Неверный формат токена"
         )
     
-    # Проверяем существование пользователя
     repo = UserRepository(db)
     user = repo.get_by_id(int(user_id_str))
     if user is None:
@@ -279,7 +274,6 @@ async def change_password(
     """
     repo = UserRepository(db)
     
-    # Проверяем текущий пароль
     user = repo.verify_user(current_user.login, request.current_password)
     if not user:
         raise HTTPException(
@@ -287,7 +281,6 @@ async def change_password(
             detail="Неверный текущий пароль"
         )
     
-    # Обновляем пароль
     try:
         repo.update_password(current_user.id, request.new_password)
         return ChangePasswordResponse(message="Пароль успешно изменен")

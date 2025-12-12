@@ -6,7 +6,7 @@
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, status, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -87,10 +87,6 @@ async def get_transactions(
             size=size
         )
     except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"Error in get_transactions: {e}")
-        print(error_details)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка при получении транзакций: {str(e)}"
@@ -132,7 +128,6 @@ async def create_transaction(
             group_id=request.group_id
         )
         return transaction
-        
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -239,7 +234,7 @@ async def update_transaction(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
-    except RuntimeError as e:
+    except RuntimeError:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка базы данных при обновлении транзакции"

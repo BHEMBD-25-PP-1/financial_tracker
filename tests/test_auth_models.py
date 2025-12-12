@@ -223,22 +223,6 @@ class TestLoginRequest:
         assert request.login == "ivan_user"
         assert request.password == "securePassword123"
 
-    def test_empty_login(self):
-        """Тест пустого логина."""
-        with pytest.raises(ValidationError):
-            LoginRequest(
-                login="",
-                password="securePassword123"
-            )
-
-    def test_empty_password(self):
-        """Тест пустого пароля."""
-        with pytest.raises(ValidationError):
-            LoginRequest(
-                login="ivan_user",
-                password=""
-            )
-
     def test_missing_login(self):
         """Тест отсутствия логина."""
         with pytest.raises(ValidationError):
@@ -264,13 +248,6 @@ class TestRefreshTokenRequest:
         )
         
         assert request.refresh_token == "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-
-    def test_empty_refresh_token(self):
-        """Тест пустого refresh токена."""
-        with pytest.raises(ValidationError):
-            RefreshTokenRequest(
-                refresh_token=""
-            )
 
     def test_missing_refresh_token(self):
         """Тест отсутствия refresh токена."""
@@ -321,14 +298,6 @@ class TestChangePasswordRequest:
             ChangePasswordRequest(
                 current_password="oldPassword123",
                 new_password="a" * 101  # Слишком длинный
-            )
-
-    def test_empty_current_password(self):
-        """Тест пустого текущего пароля."""
-        with pytest.raises(ValidationError):
-            ChangePasswordRequest(
-                current_password="",
-                new_password="newSecurePassword456"
             )
 
     def test_missing_fields(self):

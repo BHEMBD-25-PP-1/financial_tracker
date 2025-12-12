@@ -13,25 +13,25 @@ from pydantic import BaseModel, ConfigDict
 class TransactionType(str, Enum):
     """Тип транзакции."""
 
-    INCOME = "income"
-    EXPENSE = "expense"
+    INCOME = "INCOME"
+    EXPENSE = "EXPENSE"
 
 
 class PeriodType(str, Enum):
     """Тип временного периода."""
 
-    DAY = "day"
-    WEEK = "week"
-    MONTH = "month"
-    YEAR = "year"
+    DAY = "DAY"
+    WEEK = "WEEK"
+    MONTH = "MONTH"
+    YEAR = "YEAR"
 
 
 class TrendDirection(str, Enum):
     """Направление тренда."""
 
-    UP = "up"
-    DOWN = "down"
-    STABLE = "stable"
+    UP = "UP"
+    DOWN = "DOWN"
+    STABLE = "STABLE"
 
 
 class PeriodInfo(BaseModel):
@@ -78,7 +78,7 @@ class CategoryStatistic(BaseModel):
                 "total_amount": 25000.00,
                 "transaction_count": 45,
                 "percentage": 33.33,
-                "transaction_type": "expense",
+                "transaction_type": "EXPENSE",
             }
         }
     )
@@ -135,7 +135,7 @@ class PeriodAnalyticsResponse(BaseModel):
         json_schema_extra={
             "example": {
                 "periods": [],
-                "period_type": "month",
+                "period_type": "MONTH",
             }
         }
     )
@@ -151,7 +151,7 @@ class TrendInfo(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "direction": "up",
+                "direction": "UP",
                 "change_percentage": 15.5,
                 "average_daily": 3333.33,
             }
@@ -170,12 +170,12 @@ class TrendsResponse(BaseModel):
         json_schema_extra={
             "example": {
                 "income_trend": {
-                    "direction": "up",
+                    "direction": "UP",
                     "change_percentage": 15.5,
                     "average_daily": 3333.33,
                 },
                 "expense_trend": {
-                    "direction": "down",
+                    "direction": "DOWN",
                     "change_percentage": -5.2,
                     "average_daily": 2500.00,
                 },

@@ -99,12 +99,10 @@ class TransactionRepository(BaseRepository[Transaction]):
 
         try:
             with self._transaction():
-                # Проверяем существование пользователя
                 user = self.db.query(User).filter(User.id == user_id).first()
                 if not user:
                     raise ValueError(f"User with ID {user_id} not found")
                 
-                # Проверяем существование группы, если указана
                 if group_id:
                     group = self.db.query(Group).filter(Group.id == group_id).first()
                     if not group:
@@ -203,10 +201,7 @@ class TransactionRepository(BaseRepository[Transaction]):
             if transaction_type:
                 query = query.filter(Transaction.type == transaction_type)
             
-            # Получаем общее количество
             total = query.count()
-            
-            # Применяем пагинацию и сортировку
             transactions = query.order_by(Transaction.date.desc(), Transaction.id.desc()).offset(skip).limit(limit).all()
             
             self.logger.debug(f"Found {len(transactions)} transactions (total: {total})")
@@ -235,7 +230,6 @@ class TransactionRepository(BaseRepository[Transaction]):
                     self.logger.warning(f"Transaction not found or access denied: id={transaction_id}, user_id={user_id}")
                     return None
                 
-                # Валидируем и обновляем поля
                 update_data = {}
                 
                 if 'name' in kwargs:
@@ -264,13 +258,11 @@ class TransactionRepository(BaseRepository[Transaction]):
                 if 'group_id' in kwargs:
                     group_id = kwargs['group_id']
                     if group_id is not None:
-                        # Проверяем существование группы
                         group = self.db.query(Group).filter(Group.id == group_id).first()
                         if not group:
                             raise ValueError(f"Group with ID {group_id} not found")
                     update_data['group_id'] = group_id
                 
-                # Применяем обновления
                 for field, value in update_data.items():
                     setattr(transaction, field, value)
                 

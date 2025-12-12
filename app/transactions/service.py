@@ -1,7 +1,7 @@
 """Сервисный слой для Transactions API."""
 
 from datetime import date
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -19,24 +19,20 @@ class TransactionService:
 
     def __init__(self, db: Session):
         """Инициализация сервиса."""
-        self.db = db
         self.transaction_repository = TransactionRepository(db)
 
     def _convert_db_transaction_to_model(self, db_transaction) -> Transaction:
         """Преобразовать транзакцию из БД в модель API."""
-        # Преобразуем тип транзакции из enum БД в enum модели API
-        # SQLAlchemy с values_callable возвращает либо строку "income"/"expense", либо enum объект
+        # SQLAlchemy с values_callable возвращает либо строку, либо enum объект
         if isinstance(db_transaction.type, str):
             type_value = db_transaction.type
         elif isinstance(db_transaction.type, DBTransactionType):
             type_value = db_transaction.type.value
         else:
-            # Для других случаев (например, если это другой enum-подобный объект)
             type_value = getattr(db_transaction.type, 'value', str(db_transaction.type))
         
-        # Значения уже в lowercase ("income", "expense"), преобразуем в enum модели API
         try:
-            trans_type = TransactionType(type_value.lower())
+            trans_type = TransactionType(type_value.upper())
         except ValueError:
             raise ValueError(
                 f"Unknown transaction type: {type_value}. "
@@ -68,7 +64,7 @@ class TransactionService:
         end_date: Optional[date] = None,
         group_id: Optional[int] = None,
         transaction_type: Optional[TransactionType] = None
-    ) -> Tuple[list[Transaction], int]:
+    ) -> Tuple[List[Transaction], int]:
         """Получить список транзакций с пагинацией и фильтрами.
 
         Args:
@@ -86,12 +82,10 @@ class TransactionService:
         """
         skip = (page - 1) * size
 
-        # Преобразуем enum в значение для репозитория
         category_value = category.value if category else None
         transaction_type_value = None
         if transaction_type:
-            # Преобразуем TransactionType в DBTransactionType
-            transaction_type_value = DBTransactionType(transaction_type.value)
+            transaction_type_value = DBTransactionType(transaction_type.value.upper())
 
         transactions, total = self.transaction_repository.get_all(
             user_id=user_id,
@@ -138,7 +132,6 @@ class TransactionService:
             ValueError: При ошибке валидации
             RuntimeError: При ошибке базы данных
         """
-        # Валидируем категорию - преобразуем строку в enum для проверки
         try:
             category_enum = TransactionCategory(category)
         except ValueError:
@@ -148,8 +141,7 @@ class TransactionService:
                 f"Допустимые значения: {', '.join(valid_categories)}"
             )
         
-        # Преобразуем TransactionType в DBTransactionType
-        db_transaction_type = DBTransactionType(transaction_type.value)
+        db_transaction_type = DBTransactionType(transaction_type.value.upper())
 
         transaction = self.transaction_repository.create(
             name=name,
@@ -209,7 +201,6 @@ class TransactionService:
             ValueError: При ошибке валидации
             RuntimeError: При ошибке базы данных
         """
-        # Подготавливаем данные для обновления
         update_data = {}
 
         if name is not None:
@@ -219,7 +210,6 @@ class TransactionService:
             update_data['amount'] = amount
 
         if category is not None:
-            # Если category - строка, преобразуем в enum
             if isinstance(category, str):
                 try:
                     category_enum = TransactionCategory(category)
@@ -237,8 +227,7 @@ class TransactionService:
             update_data['date'] = date
 
         if transaction_type is not None:
-            # Преобразуем TransactionType в DBTransactionType
-            update_data['type'] = DBTransactionType(transaction_type.value)
+            update_data['type'] = DBTransactionType(transaction_type.value.upper())
 
         if group_id is not None:
             update_data['group_id'] = group_id

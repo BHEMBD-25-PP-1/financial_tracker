@@ -12,39 +12,36 @@ PROJECT_ROOT = Path(__file__).resolve().parents[0]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.db.session import SessionLocal, engine
 from app.db.base import Base
 from app.db.models import Transaction, User, Group, TransactionType
 from app.repositories.transaction_repository import TransactionRepository
-
-
-def _clean_transactions_table():
-    """Вспомогательная функция для очистки таблицы транзакций."""
-    session = SessionLocal()
-    try:
-        # Удаляем транзакции перед удалением пользователей и групп
-        session.query(Transaction).delete()
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
-
-
-@pytest.fixture(scope="module", autouse=True)
-def ensure_tables():
-    """Создание таблиц перед всеми тестами."""
-    Base.metadata.create_all(bind=engine)
-    yield
+from app.db import session as db_session
 
 
 @pytest.fixture(autouse=True)
 def clean_transactions_table():
     """Очистка таблицы транзакций перед и после каждого теста."""
-    _clean_transactions_table()
+    session = db_session.SessionLocal()
+    try:
+        session.query(Transaction).delete()
+        session.query(User).delete()
+        session.query(Group).delete()
+        session.commit()
+    except Exception:
+        session.rollback()
+    finally:
+        session.close()
     yield
-    _clean_transactions_table()
+    session = db_session.SessionLocal()
+    try:
+        session.query(Transaction).delete()
+        session.query(User).delete()
+        session.query(Group).delete()
+        session.commit()
+    except Exception:
+        session.rollback()
+    finally:
+        session.close()
 
 
 @pytest.fixture
@@ -52,7 +49,7 @@ def test_user():
     """Создание тестового пользователя."""
     from app.repositories.user_repository import UserRepository
     
-    session = SessionLocal()
+    session = db_session.SessionLocal()
     try:
         # Проверяем, существует ли пользователь
         existing_user = session.query(User).filter(User.login == "test_user").first()
@@ -69,9 +66,7 @@ def test_user():
             session.commit()
             session.refresh(user)
             yield user
-            # Удаляем только если мы его создали
-            session.delete(user)
-            session.commit()
+            # Не удаляем пользователя - clean_transactions_table уже очистит все таблицы
     except Exception:
         session.rollback()
         raise
@@ -82,7 +77,7 @@ def test_user():
 @pytest.fixture
 def test_group(test_user):
     """Создание тестовой группы."""
-    session = SessionLocal()
+    session = db_session.SessionLocal()
     try:
         group = Group(
             name="Test Group",
@@ -92,8 +87,7 @@ def test_group(test_user):
         session.commit()
         session.refresh(group)
         yield group
-        session.delete(group)
-        session.commit()
+        # Не удаляем группу - clean_transactions_table уже очистит все таблицы
     except Exception:
         session.rollback()
         raise
@@ -127,7 +121,7 @@ def test_create_transaction_success(repo, test_user):
     assert transaction.user_id == test_user.id
 
     # Проверяем, что транзакция сохранена в БД
-    session = SessionLocal()
+    session = db_session.SessionLocal()
     try:
         db_transaction = session.query(Transaction).filter_by(id=transaction.id).one()
         assert db_transaction.name == "Покупка продуктов"
@@ -245,9 +239,9 @@ def test_get_by_id_success(repo, test_user):
     assert fetched.amount == 1000.0
 
 
-def test_get_by_id_not_found(repo):
+def test_get_by_id_not_found(repo, test_user):
     """Тест получения несуществующей транзакции."""
-    transaction = repo.get_by_id(99999)
+    transaction = repo.get_by_id(99999, user_id=test_user.id)
     assert transaction is None
 
 
@@ -466,7 +460,7 @@ def test_delete_transaction_success(repo, test_user):
     assert deleted is True
 
     # Проверяем, что транзакция удалена
-    session = SessionLocal()
+    session = db_session.SessionLocal()
     try:
         db_transaction = session.query(Transaction).filter_by(id=created.id).first()
         assert db_transaction is None

@@ -12,12 +12,12 @@ from pydantic import BaseModel, ConfigDict, Field
 class RegisterRequest(BaseModel):
     """Запрос на регистрацию пользователя."""
 
-    first_name: str = Field(..., min_length=1, max_length=100, examples=["Иван"])
-    last_name: str = Field(..., min_length=1, max_length=100, examples=["Иванов"])
+    first_name: str = Field(..., min_length=1, max_length=100)
+    last_name: str = Field(..., min_length=1, max_length=100)
     login: str = Field(
-        ..., min_length=3, max_length=50, pattern="^[a-zA-Z0-9_]+$", examples=["ivan_user"]
+        ..., min_length=3, max_length=50, pattern="^[a-zA-Z0-9_]+$"
     )
-    password: str = Field(..., min_length=8, max_length=100, examples=["securePassword123"])
+    password: str = Field(..., min_length=8, max_length=100)
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -34,8 +34,8 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     """Запрос на авторизацию."""
 
-    login: str = Field(..., examples=["ivan_user"])
-    password: str = Field(..., examples=["securePassword123"])
+    login: str = Field(...)
+    password: str = Field(...)
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -101,7 +101,7 @@ class LoginResponse(BaseModel):
 class RefreshTokenRequest(BaseModel):
     """Запрос на обновление токена."""
 
-    refresh_token: str = Field(..., examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."])
+    refresh_token: str = Field(...)
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -133,8 +133,8 @@ class TokenResponse(BaseModel):
 class ChangePasswordRequest(BaseModel):
     """Запрос на смену пароля."""
 
-    current_password: str = Field(..., examples=["oldPassword123"])
-    new_password: str = Field(..., min_length=8, max_length=100, examples=["newPassword123"])
+    current_password: str = Field(...)
+    new_password: str = Field(..., min_length=8, max_length=100)
 
     model_config = ConfigDict(
         json_schema_extra={

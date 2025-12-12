@@ -67,7 +67,6 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Преобразуем строку в int
     try:
         user_id = int(user_id_str)
     except (ValueError, TypeError):

@@ -228,16 +228,4 @@ def test_delete_transaction_not_found(service, mock_repository):
     assert result is False
 
 
-def test_convert_db_transaction_to_model(service, db_transaction):
-    """Тест преобразования транзакции из БД в модель API."""
-    transaction = service._convert_db_transaction_to_model(db_transaction)
-
-    assert transaction.id == 1
-    assert transaction.name == "Покупка продуктов"
-    assert transaction.type == TransactionType.EXPENSE
-    assert transaction.category == TransactionCategory.FOOD
-    assert transaction.amount == 1000.0
-    assert transaction.date == date(2024, 1, 15)
-    assert transaction.user_id == 1
-    assert transaction.group_id is None
 

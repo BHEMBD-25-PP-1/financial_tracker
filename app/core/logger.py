@@ -60,6 +60,9 @@ def setup_logging(log_dir: Path = None):
     if not logger.handlers:
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)
+    else:
+        # Если обработчики уже есть, закрываем созданный файловый обработчик
+        file_handler.close()
 
     # Настройка логирования SQLAlchemy (можно отключить в продакшене)
     sqlalchemy_logger = logging.getLogger('sqlalchemy.engine')

@@ -27,17 +27,17 @@ def upgrade() -> None:
         sa.text("SELECT 1 FROM pg_type WHERE typname = 'transactiontype'")
     ).fetchone()
     if not transaction_type_exists:
-        connection.execute(sa.text("CREATE TYPE transactiontype AS ENUM ('income', 'expense')"))
+        connection.execute(sa.text("CREATE TYPE transactiontype AS ENUM ('INCOME', 'EXPENSE')"))
     
     group_role_exists = connection.execute(
         sa.text("SELECT 1 FROM pg_type WHERE typname = 'grouprole'")
     ).fetchone()
     if not group_role_exists:
-        connection.execute(sa.text("CREATE TYPE grouprole AS ENUM ('owner', 'member')"))
+        connection.execute(sa.text("CREATE TYPE grouprole AS ENUM ('OWNER', 'MEMBER')"))
     
     # Создаем объекты ENUM для использования в таблицах
-    transaction_type_enum = postgresql.ENUM('income', 'expense', name='transactiontype', create_type=False)
-    group_role_enum = postgresql.ENUM('owner', 'member', name='grouprole', create_type=False)
+    transaction_type_enum = postgresql.ENUM('INCOME', 'EXPENSE', name='transactiontype', create_type=False)
+    group_role_enum = postgresql.ENUM('OWNER', 'MEMBER', name='grouprole', create_type=False)
     
     # Создание таблицы users
     op.create_table(

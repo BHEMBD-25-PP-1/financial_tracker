@@ -11,15 +11,15 @@ from app.db.base import BaseModel
 class TransactionType(enum.Enum):
     """Тип транзакции."""
 
-    INCOME = "income"
-    EXPENSE = "expense"
+    INCOME = "INCOME"
+    EXPENSE = "EXPENSE"
 
 
 class GroupRole(enum.Enum):
     """Роль участника группы."""
 
-    owner = "owner"
-    member = "member"
+    OWNER = "OWNER"
+    MEMBER = "MEMBER"
 
 
 class User(BaseModel):
@@ -89,7 +89,7 @@ class UserGroup(BaseModel):
 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
-    role = Column(Enum(GroupRole), nullable=False, default=GroupRole.member)
+    role = Column(Enum(GroupRole), nullable=False, default=GroupRole.MEMBER)
     joined_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships

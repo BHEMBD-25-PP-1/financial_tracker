@@ -29,6 +29,7 @@ from app.groups.models import (
 )
 from app.repositories.group_repository import GroupRepository
 from app.repositories.transaction_repository import TransactionRepository
+from app.repositories.user_repository import UserRepository
 
 router = APIRouter(prefix="/groups", tags=["groups"])
 
@@ -161,7 +162,6 @@ async def get_group_by_id(
             detail=f"Группа с ID {group_id} не найдена",
         )
     
-    # Проверяем, является ли пользователь участником группы
     if not repo.is_member(group_id, current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -302,7 +302,6 @@ async def get_group_members(
     """
     repo = GroupRepository(db)
     
-    # Проверяем доступ
     if not repo.is_member(group_id, current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -327,7 +326,7 @@ async def get_group_members(
                 id=m.id,
                 user_id=m.user_id,
                 group_id=m.group_id,
-                role=GroupRole(m.role.value),
+                role=GroupRole(m.role.value.upper()),
                 joined_at=m.joined_at,
                 user=user_info
             )
@@ -371,11 +370,9 @@ async def add_group_member(
             group_id=group_id,
             user_id=request.user_id,
             owner_id=current_user.id,
-            role=DBGroupRole.member
+            role=DBGroupRole.MEMBER
         )
         
-        # Получаем информацию о пользователе
-        from app.repositories.user_repository import UserRepository
         user_repo = UserRepository(db)
         user = user_repo.get_by_id(request.user_id)
         user_info = None
@@ -391,7 +388,7 @@ async def add_group_member(
             id=user_group.id,
             user_id=user_group.user_id,
             group_id=user_group.group_id,
-            role=GroupRole(user_group.role.value),
+            role=GroupRole(user_group.role.value.upper()),
             joined_at=user_group.joined_at,
             user=user_info
         )
@@ -495,30 +492,26 @@ async def get_group_analytics(
     """
     repo = GroupRepository(db)
     
-    # Проверяем доступ
     if not repo.is_member(group_id, current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Нет доступа к этой группе",
         )
     
-    # Получаем транзакции группы
     trans_repo = TransactionRepository(db)
     transactions, _ = trans_repo.get_all(
-        user_id=None,  # Получаем все транзакции группы
+        user_id=None,
         skip=0,
-        limit=10000,  # Большой лимит для аналитики
+        limit=10000,
         start_date=start_date,
         end_date=end_date,
         group_id=group_id
     )
     
-    # Вычисляем статистику
-    total_income = sum(t.amount for t in transactions if t.type.value == "income")
-    total_expense = sum(t.amount for t in transactions if t.type.value == "expense")
+    total_income = sum(t.amount for t in transactions if t.type.value.upper() == "INCOME")
+    total_expense = sum(t.amount for t in transactions if t.type.value.upper() == "EXPENSE")
     balance = total_income - total_expense
     
-    # Группируем по категориям
     category_stats = {}
     for t in transactions:
         if t.category not in category_stats:
