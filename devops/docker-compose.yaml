@@ -32,6 +32,7 @@ services:
       DB_PASSWORD: mypassword
       DB_NAME: mydatabase
       DATABASE_URL: postgresql+psycopg2://myuser:mypassword@postgres:5432/mydatabase
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
     depends_on:
       postgres:
         condition: service_healthy

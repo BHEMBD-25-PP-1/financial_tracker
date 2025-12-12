@@ -78,6 +78,66 @@ def test_get_summary(mock_repo, client_with_auth):
     assert data["period"] is None
 
 
+def test_get_summary_with_start_date_only(mock_repo, client_with_auth):
+    """Тест получения статистики только с start_date."""
+    response = client_with_auth.get("/api/v1/analytics/summary?start_date=2024-01-12")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["total_income"] == 300.0
+    assert data["total_expense"] == 50.0
+    assert data["period"] is not None
+    assert data["period"]["start_date"] == "2024-01-12"
+    assert data["period"]["end_date"] is None
+
+
+def test_get_summary_with_end_date_only(mock_repo, client_with_auth):
+    """Тест получения статистики только с end_date."""
+    response = client_with_auth.get("/api/v1/analytics/summary?end_date=2025-12-12")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["total_income"] == 300.0
+    assert data["total_expense"] == 50.0
+    assert data["period"] is not None
+    assert data["period"]["start_date"] is None
+    assert data["period"]["end_date"] == "2025-12-12"
+
+
+def test_get_summary_with_both_dates(mock_repo, client_with_auth):
+    """Тест получения статистики с обеими датами."""
+    response = client_with_auth.get("/api/v1/analytics/summary?start_date=2024-01-12&end_date=2025-12-12")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["total_income"] == 300.0
+    assert data["total_expense"] == 50.0
+    assert data["period"] is not None
+    assert data["period"]["start_date"] == "2024-01-12"
+    assert data["period"]["end_date"] == "2025-12-12"
+
+
+def test_get_summary_with_group_id_no_access(mock_repo, client_with_auth):
+    """Тест получения статистики с group_id без доступа."""
+    with patch("app.repositories.group_repository.GroupRepository.is_member") as mock_is_member:
+        mock_is_member.return_value = False
+        response = client_with_auth.get("/api/v1/analytics/summary?group_id=1")
+        assert response.status_code == 403
+        assert "Нет доступа к этой группе" in response.json()["detail"]
+
+
+def test_get_summary_with_group_id_with_access(mock_repo, client_with_auth):
+    """Тест получения статистики с group_id с доступом."""
+    with patch("app.repositories.group_repository.GroupRepository.is_member") as mock_is_member:
+        mock_is_member.return_value = True
+        response = client_with_auth.get("/api/v1/analytics/summary?group_id=1")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["total_income"] == 300.0
+        assert data["total_expense"] == 50.0
+
+
 def test_get_by_category(mock_repo, client_with_auth):
     response = client_with_auth.get("/api/v1/analytics/by-category")
     assert response.status_code == 200

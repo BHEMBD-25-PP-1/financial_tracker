@@ -25,6 +25,7 @@ from app.analytics.models import (
 from app.core.dependencies import get_current_user
 from app.db.models import User as DBUser
 from app.db.session import get_db
+from app.repositories.group_repository import GroupRepository
 from app.repositories.transaction_repository import TransactionRepository
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -60,6 +61,15 @@ async def get_summary(
     Returns:
         SummaryResponse: Общая статистика
     """
+    # Проверка доступа к группе, если указан group_id
+    if group_id is not None:
+        group_repo = GroupRepository(db)
+        if not group_repo.is_member(group_id, current_user.id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Нет доступа к этой группе",
+            )
+    
     repo = TransactionRepository(db)
     
     transactions, _ = repo.get_all(

@@ -136,7 +136,7 @@ def upgrade() -> None:
             {
                 'user_id': user_ids['ivanov'],
                 'group_id': group_ids['Семейный бюджет'],
-                'role': 'owner',
+                'role': 'OWNER',
                 'joined_at': now,
                 'created_at': now,
                 'updated_at': now,
@@ -144,7 +144,7 @@ def upgrade() -> None:
             {
                 'user_id': user_ids['petrova'],
                 'group_id': group_ids['Семейный бюджет'],
-                'role': 'member',
+                'role': 'MEMBER',
                 'joined_at': now,
                 'created_at': now,
                 'updated_at': now,
@@ -153,7 +153,7 @@ def upgrade() -> None:
             {
                 'user_id': user_ids['petrova'],
                 'group_id': group_ids['Рабочая группа'],
-                'role': 'owner',
+                'role': 'OWNER',
                 'joined_at': now,
                 'created_at': now,
                 'updated_at': now,
@@ -161,7 +161,7 @@ def upgrade() -> None:
             {
                 'user_id': user_ids['sidorov'],
                 'group_id': group_ids['Рабочая группа'],
-                'role': 'member',
+                'role': 'MEMBER',
                 'joined_at': now,
                 'created_at': now,
                 'updated_at': now,
@@ -169,7 +169,7 @@ def upgrade() -> None:
             {
                 'user_id': user_ids['kozlova'],
                 'group_id': group_ids['Рабочая группа'],
-                'role': 'member',
+                'role': 'MEMBER',
                 'joined_at': now,
                 'created_at': now,
                 'updated_at': now,
@@ -199,7 +199,7 @@ def upgrade() -> None:
             # Доходы Ивана
             {
                 'name': 'Зарплата',
-                'type': 'income',
+                'type': 'INCOME',
                 'category': 'Работа',
                 'amount': 100000.0,
                 'date': today,
@@ -210,7 +210,7 @@ def upgrade() -> None:
             },
             {
                 'name': 'Премия',
-                'type': 'income',
+                'type': 'INCOME',
                 'category': 'Работа',
                 'amount': 20000.0,
                 'date': today,
@@ -222,7 +222,7 @@ def upgrade() -> None:
             # Расходы Ивана
             {
                 'name': 'Продукты',
-                'type': 'expense',
+                'type': 'EXPENSE',
                 'category': 'Еда',
                 'amount': 5000.0,
                 'date': today,
@@ -233,7 +233,7 @@ def upgrade() -> None:
             },
             {
                 'name': 'Транспорт',
-                'type': 'expense',
+                'type': 'EXPENSE',
                 'category': 'Транспорт',
                 'amount': 2000.0,
                 'date': today,
@@ -245,7 +245,7 @@ def upgrade() -> None:
             # Доходы Марии
             {
                 'name': 'Зарплата',
-                'type': 'income',
+                'type': 'INCOME',
                 'category': 'Работа',
                 'amount': 80000.0,
                 'date': today,
@@ -257,7 +257,7 @@ def upgrade() -> None:
             # Расходы Марии
             {
                 'name': 'Одежда',
-                'type': 'expense',
+                'type': 'EXPENSE',
                 'category': 'Покупки',
                 'amount': 10000.0,
                 'date': today,
@@ -268,7 +268,7 @@ def upgrade() -> None:
             },
             {
                 'name': 'Коммунальные услуги',
-                'type': 'expense',
+                'type': 'EXPENSE',
                 'category': 'Жилье',
                 'amount': 8000.0,
                 'date': today,
@@ -280,7 +280,7 @@ def upgrade() -> None:
             # Доходы Алексея
             {
                 'name': 'Фриланс',
-                'type': 'income',
+                'type': 'INCOME',
                 'category': 'Работа',
                 'amount': 30000.0,
                 'date': today,
@@ -292,7 +292,7 @@ def upgrade() -> None:
             # Расходы Алексея
             {
                 'name': 'Развлечения',
-                'type': 'expense',
+                'type': 'EXPENSE',
                 'category': 'Досуг',
                 'amount': 5000.0,
                 'date': today,
@@ -304,7 +304,7 @@ def upgrade() -> None:
             # Доходы Елены
             {
                 'name': 'Зарплата',
-                'type': 'income',
+                'type': 'INCOME',
                 'category': 'Работа',
                 'amount': 70000.0,
                 'date': today,
@@ -316,7 +316,7 @@ def upgrade() -> None:
             # Расходы Елены
             {
                 'name': 'Образование',
-                'type': 'expense',
+                'type': 'EXPENSE',
                 'category': 'Образование',
                 'amount': 15000.0,
                 'date': today,

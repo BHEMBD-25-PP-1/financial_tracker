@@ -40,6 +40,12 @@ class PeriodInfo(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
 
+    model_config = ConfigDict(
+        json_encoders={
+            date: lambda v: v.isoformat() if v else None
+        }
+    )
+
 
 class SummaryResponse(BaseModel):
     """Общая статистика."""

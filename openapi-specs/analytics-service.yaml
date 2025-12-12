@@ -48,6 +48,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '403':
+          description: Нет доступа к группе
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /analytics/by-category:
     get:
