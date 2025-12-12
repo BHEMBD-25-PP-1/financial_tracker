@@ -49,6 +49,16 @@
 4. Развёртывание: создан файл конфигурации Docker Compose для
 сборки и запуска проекта в контейнере.
 
+## Запуск проекта локально
+
+```bash
+git clone https://github.com/BHEMBD-25-PP-1/financial_tracker.git
+cd financial_tracker/devops
+docker compose up -d
+```
+
+Приложение доступно по адресу: `http://localhost:8000`
+
 #### Общая архитектура
 
 ```mermaid
