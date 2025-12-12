@@ -1,13 +1,13 @@
 # financial_tracker
 
 ## Команда
-| Имя               | Роль          | GitHub                                   | Доступность |
-|--------------------|---------------|------------------------------------------|------------|
-| Анна Милютина     | Аналитика     | [millana4](https://github.com/millana4)  | 9:00 — 21:00|
-| Иван Людвиков     | Разработка    | [Vanusha61](https://github.com/Vanusha61)| 9:00 — 22:00|
-| Артём Царюк       | Тимлид        | [funcid](https://github.com/funcid)      | 18:00 — 21:00|
-| Абида Аюшиев      | Тестировщик   | [ayutoso28](https://github.com/ayutoso28)| 9:00 — 22:00|
-| Альбина Шустова   | Разработка    | [AlbinaShu](https://github.com/AlbinaShu)| 12:00 — 23:00| 
+| Имя               | Роль          | GitHub                                   | Доступность | Отчет |
+|--------------------|---------------|------------------------------------------|------------|-------|
+| Анна Милютина     | Аналитика     | [millana4](https://github.com/millana4)  | 9:00 — 21:00| [Отчет](misc/anna_milyutina_report.md) |
+| Иван Людвиков     | Разработка    | [Vanusha61](https://github.com/Vanusha61)| 9:00 — 22:00| [Отчет](misc/ivan_ludvikov_report.md) |
+| Артём Царюк       | Тимлид        | [funcid](https://github.com/funcid)      | 18:00 — 21:00| [Отчет](misc/artyom_tsaryuk_report.md) |
+| Абида Аюшиев      | Тестировщик   | [ayutoso28](https://github.com/ayutoso28)| 9:00 — 22:00| [Отчет](misc/abida_ayushiev_report.md) |
+| Альбина Шустова   | Разработка    | [AlbinaShu](https://github.com/AlbinaShu)| 12:00 — 23:00| [Отчет](misc/albina_shustova_report.md) | 
 
 ## Задание: 6. Приложение для отслеживания расходов
 Описание: приложение для управления личными финансами,
