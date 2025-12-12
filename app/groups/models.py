@@ -13,8 +13,8 @@ from pydantic import BaseModel, Field
 class GroupRole(str, Enum):
     """Роль участника группы."""
 
-    OWNER = "owner"
-    MEMBER = "member"
+    owner = "owner"
+    member = "member"
 
 
 class Group(BaseModel):
@@ -44,6 +44,7 @@ class CreateGroupRequest(BaseModel):
     """Запрос на создание группы."""
 
     name: str = Field(..., min_length=1, max_length=200, example="Семья Ивановых")
+    owner_id: int = Field(..., example=1)
 
     class Config:
         """Конфигурация модели."""
@@ -51,6 +52,7 @@ class CreateGroupRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "name": "Семья Ивановых",
+                "owner_id": 1,
             }
         }
 

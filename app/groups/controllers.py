@@ -371,7 +371,7 @@ async def add_group_member(
             group_id=group_id,
             user_id=request.user_id,
             owner_id=current_user.id,
-            role=DBGroupRole.MEMBER
+            role=DBGroupRole.member
         )
         
         # Получаем информацию о пользователе
