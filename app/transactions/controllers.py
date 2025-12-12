@@ -141,7 +141,12 @@ async def create_transaction(
     except RuntimeError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка базы данных при создании транзакции"
+            detail=f"Ошибка базы данных при создании транзакции: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при создании транзакции: {str(e)}"
         )
 
 

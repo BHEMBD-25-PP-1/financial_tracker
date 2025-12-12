@@ -30,7 +30,19 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         bool: True если пароль верный
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    if not plain_password or not hashed_password:
+        return False
+    # Убеждаемся, что пароль - это строка и не превышает 72 байта
+    if isinstance(plain_password, bytes):
+        plain_password = plain_password.decode('utf-8')
+    # Обрезаем пароль до 72 байт для совместимости с bcrypt
+    plain_password_bytes = plain_password.encode('utf-8')
+    if len(plain_password_bytes) > 72:
+        plain_password = plain_password_bytes[:72].decode('utf-8', errors='ignore')
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False
 
 
 def get_password_hash(password: str) -> str:
@@ -42,6 +54,15 @@ def get_password_hash(password: str) -> str:
     Returns:
         str: Хешированный пароль
     """
+    if not password:
+        raise ValueError("Password cannot be empty")
+    # Убеждаемся, что пароль - это строка
+    if isinstance(password, bytes):
+        password = password.decode('utf-8')
+    # Обрезаем пароль до 72 байт для совместимости с bcrypt
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password = password_bytes[:72].decode('utf-8', errors='ignore')
     return pwd_context.hash(password)
 
 

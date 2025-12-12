@@ -25,14 +25,53 @@ class TransactionService:
     def _convert_db_transaction_to_model(self, db_transaction) -> Transaction:
         """Преобразовать транзакцию из БД в модель API."""
         # Преобразуем тип транзакции из enum БД в enum модели
-        if hasattr(db_transaction.type, 'value'):
-            type_value = db_transaction.type.value
-        elif isinstance(db_transaction.type, str):
-            type_value = db_transaction.type
-        else:
+        type_value = None
+        
+        # Пробуем разные способы получения значения типа транзакции
+        try:
+            if isinstance(db_transaction.type, str):
+                # Это уже строка
+                type_value = db_transaction.type
+            elif isinstance(db_transaction.type, DBTransactionType):
+                # Это enum из БД, берем его значение
+                type_value = db_transaction.type.value
+            elif hasattr(db_transaction.type, 'value'):
+                # Это enum, пробуем получить value
+                type_value = db_transaction.type.value
+            elif hasattr(db_transaction.type, 'name'):
+                # Это enum, пробуем через name и преобразуем в значение
+                name = db_transaction.type.name
+                if name == "INCOME":
+                    type_value = "income"
+                elif name == "EXPENSE":
+                    type_value = "expense"
+                else:
+                    type_value = name.lower()
+            else:
+                # Пытаемся преобразовать в строку
+                type_value = str(db_transaction.type)
+        except Exception as e:
+            # Если ничего не сработало, пробуем получить строковое представление
             type_value = str(db_transaction.type)
 
-        trans_type = TransactionType(type_value)
+        # Нормализуем значение: приводим к lowercase для совместимости
+        if isinstance(type_value, str):
+            type_value_lower = type_value.lower()
+        else:
+            type_value_lower = str(type_value).lower()
+        
+        # Преобразуем в enum модели API (значения там lowercase: "income", "expense")
+        if type_value_lower == "income":
+            trans_type = TransactionType.INCOME
+        elif type_value_lower == "expense":
+            trans_type = TransactionType.EXPENSE
+        else:
+            # Если ничего не подошло, пробуем создать напрямую
+            try:
+                trans_type = TransactionType(type_value_lower)
+            except ValueError:
+                raise ValueError(f"Unknown transaction type: {type_value} (normalized: {type_value_lower}). Transaction ID: {db_transaction.id}")
+        
         trans_category = TransactionCategory(db_transaction.category)
 
         return Transaction(
@@ -104,7 +143,7 @@ class TransactionService:
         self,
         name: str,
         transaction_type: TransactionType,
-        category: TransactionCategory,
+        category: str,
         amount: float,
         transaction_date: date,
         user_id: int,
@@ -115,7 +154,7 @@ class TransactionService:
         Args:
             name: Название транзакции
             transaction_type: Тип транзакции
-            category: Категория транзакции
+            category: Категория транзакции (строка)
             amount: Сумма транзакции
             transaction_date: Дата транзакции
             user_id: ID пользователя
@@ -128,13 +167,23 @@ class TransactionService:
             ValueError: При ошибке валидации
             RuntimeError: При ошибке базы данных
         """
+        # Валидируем категорию - преобразуем строку в enum для проверки
+        try:
+            category_enum = TransactionCategory(category)
+        except ValueError:
+            valid_categories = [cat.value for cat in TransactionCategory]
+            raise ValueError(
+                f"Недопустимая категория '{category}'. "
+                f"Допустимые значения: {', '.join(valid_categories)}"
+            )
+        
         # Преобразуем TransactionType в DBTransactionType
         db_transaction_type = DBTransactionType(transaction_type.value)
 
         transaction = self.transaction_repository.create(
             name=name,
             type=db_transaction_type,
-            category=category.value,
+            category=category_enum.value,
             amount=amount,
             transaction_date=transaction_date,
             user_id=user_id,
@@ -199,7 +248,19 @@ class TransactionService:
             update_data['amount'] = amount
 
         if category is not None:
-            update_data['category'] = category.value
+            # Если category - строка, преобразуем в enum
+            if isinstance(category, str):
+                try:
+                    category_enum = TransactionCategory(category)
+                    update_data['category'] = category_enum.value
+                except ValueError:
+                    valid_categories = [cat.value for cat in TransactionCategory]
+                    raise ValueError(
+                        f"Недопустимая категория '{category}'. "
+                        f"Допустимые значения: {', '.join(valid_categories)}"
+                    )
+            else:
+                update_data['category'] = category.value
 
         if date is not None:
             update_data['date'] = date
