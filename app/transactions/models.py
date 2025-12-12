@@ -3,7 +3,7 @@
 Автоматически сгенерировано из openapi-specs/transactions-service.yaml
 """
 
-from datetime import date, datetime
+from datetime import date as Date, datetime
 from enum import Enum
 from typing import List, Optional
 
@@ -45,7 +45,7 @@ class Transaction(BaseModel):
     type: TransactionType
     category: str
     amount: float
-    date: date
+    date: Date
     user_id: int
     group_id: Optional[int] = Field(None, description="ID группы, если транзакция относится к группе")
     created_at: datetime
@@ -77,7 +77,7 @@ class CreateTransactionRequest(BaseModel):
     type: TransactionType
     category: str
     amount: float
-    date: date
+    date: Date
     group_id: Optional[int] = Field(None, description="ID группы, если транзакция относится к группе")
 
     class Config:
@@ -102,7 +102,7 @@ class UpdateTransactionRequest(BaseModel):
     type: Optional[TransactionType] = None
     category: Optional[str] = None
     amount: Optional[float] = None
-    date: Optional[date] = None
+    date: Optional[Date] = None
     group_id: Optional[int] = Field(None, description="ID группы, если транзакция относится к группе")
 
     class Config:

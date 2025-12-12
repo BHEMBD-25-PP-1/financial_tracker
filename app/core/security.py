@@ -20,6 +20,22 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+def _truncate_password_for_bcrypt(password: str) -> str:
+    """Обрезать пароль до 72 байт для совместимости с bcrypt.
+    
+    Args:
+        password: Пароль в виде строки
+        
+    Returns:
+        str: Пароль, обрезанный до 72 байт в UTF-8
+    """
+    encoded = password.encode("utf-8")
+    if len(encoded) > 72:
+        encoded = encoded[:72]
+        password = encoded.decode("utf-8", errors="ignore")
+    return password
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Проверить пароль.
 
@@ -30,20 +46,23 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         bool: True если пароль верный
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    if not plain_password or not hashed_password:
+        return False
+    # Обрезаем пароль до 72 байт для совместимости с bcrypt
+    plain_password = _truncate_password_for_bcrypt(plain_password)
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False
 
 
 def get_password_hash(password: str) -> str:
-    """Получить хеш пароля.
+    if not password:
+        raise ValueError("Password cannot be empty")
 
-    Args:
-        password: Пароль в открытом виде
-
-    Returns:
-        str: Хешированный пароль
-    """
+    # Ограничиваем длину строки так, чтобы UTF-8 занимал максимум 72 байта
+    password = _truncate_password_for_bcrypt(password)
     return pwd_context.hash(password)
-
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Создать access токен.

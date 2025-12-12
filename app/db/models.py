@@ -48,7 +48,7 @@ class Transaction(BaseModel):
     __tablename__ = "transactions"
 
     name = Column(String(255), nullable=False)
-    type = Column(Enum(TransactionType), nullable=False)
+    type = Column(Enum(TransactionType, values_callable=lambda x: [e.value for e in x]), nullable=False)
     category = Column(String(100), nullable=False)
     amount = Column(Float, nullable=False)
     date = Column(Date, nullable=False)

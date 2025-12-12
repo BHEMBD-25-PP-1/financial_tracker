@@ -24,15 +24,25 @@ class TransactionService:
 
     def _convert_db_transaction_to_model(self, db_transaction) -> Transaction:
         """Преобразовать транзакцию из БД в модель API."""
-        # Преобразуем тип транзакции из enum БД в enum модели
-        if hasattr(db_transaction.type, 'value'):
-            type_value = db_transaction.type.value
-        elif isinstance(db_transaction.type, str):
+        # Преобразуем тип транзакции из enum БД в enum модели API
+        # SQLAlchemy с values_callable возвращает либо строку "income"/"expense", либо enum объект
+        if isinstance(db_transaction.type, str):
             type_value = db_transaction.type
+        elif isinstance(db_transaction.type, DBTransactionType):
+            type_value = db_transaction.type.value
         else:
-            type_value = str(db_transaction.type)
-
-        trans_type = TransactionType(type_value)
+            # Для других случаев (например, если это другой enum-подобный объект)
+            type_value = getattr(db_transaction.type, 'value', str(db_transaction.type))
+        
+        # Значения уже в lowercase ("income", "expense"), преобразуем в enum модели API
+        try:
+            trans_type = TransactionType(type_value.lower())
+        except ValueError:
+            raise ValueError(
+                f"Unknown transaction type: {type_value}. "
+                f"Transaction ID: {db_transaction.id}"
+            )
+        
         trans_category = TransactionCategory(db_transaction.category)
 
         return Transaction(
@@ -104,7 +114,7 @@ class TransactionService:
         self,
         name: str,
         transaction_type: TransactionType,
-        category: TransactionCategory,
+        category: str,
         amount: float,
         transaction_date: date,
         user_id: int,
@@ -115,7 +125,7 @@ class TransactionService:
         Args:
             name: Название транзакции
             transaction_type: Тип транзакции
-            category: Категория транзакции
+            category: Категория транзакции (строка)
             amount: Сумма транзакции
             transaction_date: Дата транзакции
             user_id: ID пользователя
@@ -128,13 +138,23 @@ class TransactionService:
             ValueError: При ошибке валидации
             RuntimeError: При ошибке базы данных
         """
+        # Валидируем категорию - преобразуем строку в enum для проверки
+        try:
+            category_enum = TransactionCategory(category)
+        except ValueError:
+            valid_categories = [cat.value for cat in TransactionCategory]
+            raise ValueError(
+                f"Недопустимая категория '{category}'. "
+                f"Допустимые значения: {', '.join(valid_categories)}"
+            )
+        
         # Преобразуем TransactionType в DBTransactionType
         db_transaction_type = DBTransactionType(transaction_type.value)
 
         transaction = self.transaction_repository.create(
             name=name,
             type=db_transaction_type,
-            category=category.value,
+            category=category_enum.value,
             amount=amount,
             transaction_date=transaction_date,
             user_id=user_id,
@@ -199,7 +219,19 @@ class TransactionService:
             update_data['amount'] = amount
 
         if category is not None:
-            update_data['category'] = category.value
+            # Если category - строка, преобразуем в enum
+            if isinstance(category, str):
+                try:
+                    category_enum = TransactionCategory(category)
+                    update_data['category'] = category_enum.value
+                except ValueError:
+                    valid_categories = [cat.value for cat in TransactionCategory]
+                    raise ValueError(
+                        f"Недопустимая категория '{category}'. "
+                        f"Допустимые значения: {', '.join(valid_categories)}"
+                    )
+            else:
+                update_data['category'] = category.value
 
         if date is not None:
             update_data['date'] = date

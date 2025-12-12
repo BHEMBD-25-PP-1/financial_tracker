@@ -238,7 +238,7 @@ class TransactionRepository(BaseRepository[Transaction]):
                 # Валидируем и обновляем поля
                 update_data = {}
                 
-                if 'name' in kwargs and kwargs['name']:
+                if 'name' in kwargs:
                     if not kwargs['name'] or not kwargs['name'].strip():
                         raise ValueError("Transaction name cannot be empty")
                     update_data['name'] = kwargs['name'].strip()
@@ -248,7 +248,7 @@ class TransactionRepository(BaseRepository[Transaction]):
                         raise ValueError("Transaction amount must be positive")
                     update_data['amount'] = float(kwargs['amount'])
                 
-                if 'category' in kwargs and kwargs['category']:
+                if 'category' in kwargs:
                     if not kwargs['category'] or not kwargs['category'].strip():
                         raise ValueError("Transaction category cannot be empty")
                     update_data['category'] = kwargs['category'].strip()
