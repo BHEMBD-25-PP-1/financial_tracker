@@ -38,7 +38,7 @@ done\n\
 echo "База данных доступна. Запуск миграций..."\n\
 alembic upgrade head\n\
 echo "Миграции выполнены. Запуск приложения..."\n\
-exec uvicorn main:app --host 0.0.0.0 --port 8000\n\
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000\n\
 ' > /start.sh && chmod +x /start.sh
 
 CMD ["/start.sh"]

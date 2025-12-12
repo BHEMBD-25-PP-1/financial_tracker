@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 from datetime import date
 
-from main import app
+from app.main import app
 from app.db.models import Transaction, TransactionType, User as DBUser
 from app.core.dependencies import get_current_user, get_db
 

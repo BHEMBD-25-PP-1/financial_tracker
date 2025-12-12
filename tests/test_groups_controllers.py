@@ -1,19 +1,12 @@
 """Тесты для Groups API контроллеров."""
 
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
 
-# Ensure project modules are importable when running pytest from repo root
-PROJECT_ROOT = Path(__file__).resolve().parents[0]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-from main import app
+from app.main import app
 from app.core.dependencies import get_current_user, get_db
 from app.db.models import User as DBUser, Group, GroupRole as DBGroupRole, UserGroup
 from app.groups.models import GroupRole

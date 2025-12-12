@@ -68,7 +68,7 @@ graph TB
     end
     
     subgraph "API Gateway / FastAPI Application"
-        API[FastAPI App<br/>main.py]
+        API[FastAPI App<br/>app/main.py]
         AuthAPI[Auth Controller<br/>/api/v1/auth]
         TransAPI[Transactions Controller<br/>/api/v1/transactions]
         GroupsAPI[Groups Controller<br/>/api/v1/groups]
