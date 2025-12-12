@@ -4,8 +4,8 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 # Загружаем .env если ещё не загружен
 from app.core.config import DATABASE_URL  # noqa: F401 - триггерит загрузку .env
@@ -16,24 +16,20 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
-# Контекст для хеширования паролей
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-
-def _truncate_password_for_bcrypt(password: str) -> str:
+def _truncate_password_for_bcrypt(password: str) -> bytes:
     """Обрезать пароль до 72 байт для совместимости с bcrypt.
     
     Args:
         password: Пароль в виде строки
         
     Returns:
-        str: Пароль, обрезанный до 72 байт в UTF-8
+        bytes: Пароль в байтах, обрезанный до 72 байт
     """
     encoded = password.encode("utf-8")
     if len(encoded) > 72:
         encoded = encoded[:72]
-        password = encoded.decode("utf-8", errors="ignore")
-    return password
+    return encoded
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -49,20 +45,30 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     if not plain_password or not hashed_password:
         return False
     # Обрезаем пароль до 72 байт для совместимости с bcrypt
-    plain_password = _truncate_password_for_bcrypt(plain_password)
+    password_bytes = _truncate_password_for_bcrypt(plain_password)
     try:
-        return pwd_context.verify(plain_password, hashed_password)
+        return bcrypt.checkpw(password_bytes, hashed_password.encode("utf-8"))
     except Exception:
         return False
 
 
 def get_password_hash(password: str) -> str:
+    """Хешировать пароль.
+
+    Args:
+        password: Пароль в открытом виде
+
+    Returns:
+        str: Хешированный пароль
+    """
     if not password:
         raise ValueError("Password cannot be empty")
 
     # Ограничиваем длину строки так, чтобы UTF-8 занимал максимум 72 байта
-    password = _truncate_password_for_bcrypt(password)
-    return pwd_context.hash(password)
+    password_bytes = _truncate_password_for_bcrypt(password)
+    hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+    return hashed.decode("utf-8")
+
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Создать access токен.
@@ -114,4 +120,3 @@ def decode_token(token: str) -> Optional[dict]:
         return payload
     except JWTError:
         return None
-

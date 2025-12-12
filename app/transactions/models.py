@@ -7,7 +7,7 @@ from datetime import date as Date, datetime
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TransactionType(str, Enum):
@@ -15,6 +15,7 @@ class TransactionType(str, Enum):
 
     INCOME = "income"
     EXPENSE = "expense"
+
 
 class TransactionCategory(str, Enum):
     """Категория транзакции."""
@@ -34,7 +35,7 @@ class TransactionCategory(str, Enum):
     COSMETICS_AND_HOUSEHOLD = "Косметика и бытовая химия"
     SPORTS = "Спорт"
     ENTERTAINMENT = "Развлечения"
-    CAFE_AND_RESTAURANTS = "Кафе и рестораны"    
+    CAFE_AND_RESTAURANTS = "Кафе и рестораны"
 
 
 class Transaction(BaseModel):
@@ -51,10 +52,8 @@ class Transaction(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "Покупка продуктов",
@@ -68,6 +67,7 @@ class Transaction(BaseModel):
                 "updated_at": "2024-01-15T10:30:00Z",
             }
         }
+    )
 
 
 class CreateTransactionRequest(BaseModel):
@@ -80,10 +80,8 @@ class CreateTransactionRequest(BaseModel):
     date: Date
     group_id: Optional[int] = Field(None, description="ID группы, если транзакция относится к группе")
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Покупка продуктов",
                 "type": "expense",
@@ -93,6 +91,7 @@ class CreateTransactionRequest(BaseModel):
                 "group_id": None,
             }
         }
+    )
 
 
 class UpdateTransactionRequest(BaseModel):
@@ -105,10 +104,8 @@ class UpdateTransactionRequest(BaseModel):
     date: Optional[Date] = None
     group_id: Optional[int] = Field(None, description="ID группы, если транзакция относится к группе")
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Покупка продуктов",
                 "type": "expense",
@@ -118,6 +115,7 @@ class UpdateTransactionRequest(BaseModel):
                 "group_id": None,
             }
         }
+    )
 
 
 class TransactionListResponse(BaseModel):
@@ -128,10 +126,8 @@ class TransactionListResponse(BaseModel):
     page: int
     size: int
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "items": [],
                 "total": 0,
@@ -139,6 +135,7 @@ class TransactionListResponse(BaseModel):
                 "size": 20,
             }
         }
+    )
 
 
 class Error(BaseModel):
@@ -147,13 +144,11 @@ class Error(BaseModel):
     detail: str
     error_code: Optional[str] = None
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "detail": "Описание ошибки",
                 "error_code": "VALIDATION_ERROR",
             }
         }
-
+    )
