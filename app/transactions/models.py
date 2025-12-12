@@ -16,6 +16,26 @@ class TransactionType(str, Enum):
     INCOME = "income"
     EXPENSE = "expense"
 
+class TransactionCategory(str, Enum):
+    """Категория транзакции."""
+
+    PRODUCTS = "Продукты"
+    CLOTHING_AND_SHOES = "Одежда и обувь"
+    HOME_AND_REPAIR = "Дом и ремонт"
+    HOUSING = "Жилье"
+    EDUCATION = "Образование"
+    WORK = "Работа"
+    FOOD = "Еда"
+    LEISURE = "Досуг"
+    SHOPPING = "Покупки"
+    TRAVEL = "Путешествия"
+    TRANSPORT = "Транспорт"
+    TRANSFERS = "Переводы"
+    COSMETICS_AND_HOUSEHOLD = "Косметика и бытовая химия"
+    SPORTS = "Спорт"
+    ENTERTAINMENT = "Развлечения"
+    CAFE_AND_RESTAURANTS = "Кафе и рестораны"    
+
 
 class Transaction(BaseModel):
     """Модель транзакции."""
