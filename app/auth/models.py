@@ -6,25 +6,21 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RegisterRequest(BaseModel):
     """Запрос на регистрацию пользователя."""
 
-    first_name: str = Field(..., min_length=1, max_length=100, example="Иван")
-    last_name: str = Field(..., min_length=1, max_length=100, example="Иванов")
+    first_name: str = Field(..., min_length=1, max_length=100, examples=["Иван"])
+    last_name: str = Field(..., min_length=1, max_length=100, examples=["Иванов"])
     login: str = Field(
-        ..., min_length=3, max_length=50, pattern="^[a-zA-Z0-9_]+$", example="ivan_user"
+        ..., min_length=3, max_length=50, pattern="^[a-zA-Z0-9_]+$", examples=["ivan_user"]
     )
-    password: str = Field(
-        ..., min_length=8, max_length=100, format="password", example="securePassword123"
-    )
+    password: str = Field(..., min_length=8, max_length=100, examples=["securePassword123"])
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "first_name": "Иван",
                 "last_name": "Иванов",
@@ -32,23 +28,23 @@ class RegisterRequest(BaseModel):
                 "password": "securePassword123",
             }
         }
+    )
 
 
 class LoginRequest(BaseModel):
     """Запрос на авторизацию."""
 
-    login: str = Field(..., example="ivan_user")
-    password: str = Field(..., format="password", example="securePassword123")
+    login: str = Field(..., examples=["ivan_user"])
+    password: str = Field(..., examples=["securePassword123"])
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "login": "ivan_user",
                 "password": "securePassword123",
             }
         }
+    )
 
 
 class User(BaseModel):
@@ -61,10 +57,8 @@ class User(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "first_name": "Иван",
@@ -74,6 +68,7 @@ class User(BaseModel):
                 "updated_at": "2024-01-15T10:30:00Z",
             }
         }
+    )
 
 
 class LoginResponse(BaseModel):
@@ -84,10 +79,8 @@ class LoginResponse(BaseModel):
     token_type: str = "bearer"
     user: User
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                 "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -102,21 +95,21 @@ class LoginResponse(BaseModel):
                 },
             }
         }
+    )
 
 
 class RefreshTokenRequest(BaseModel):
     """Запрос на обновление токена."""
 
-    refresh_token: str = Field(..., example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+    refresh_token: str = Field(..., examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."])
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
             }
         }
+    )
 
 
 class TokenResponse(BaseModel):
@@ -126,35 +119,31 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                 "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                 "token_type": "bearer",
             }
         }
+    )
 
 
 class ChangePasswordRequest(BaseModel):
     """Запрос на смену пароля."""
 
-    current_password: str = Field(..., format="password", example="oldPassword123")
-    new_password: str = Field(
-        ..., min_length=8, max_length=100, format="password", example="newPassword123"
-    )
+    current_password: str = Field(..., examples=["oldPassword123"])
+    new_password: str = Field(..., min_length=8, max_length=100, examples=["newPassword123"])
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "current_password": "oldPassword123",
                 "new_password": "newPassword123",
             }
         }
+    )
 
 
 class ChangePasswordResponse(BaseModel):
@@ -169,13 +158,11 @@ class Error(BaseModel):
     detail: str
     error_code: Optional[str] = None
 
-    class Config:
-        """Конфигурация модели."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "detail": "Описание ошибки",
                 "error_code": "VALIDATION_ERROR",
             }
         }
-
+    )
